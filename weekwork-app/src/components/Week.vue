@@ -51,7 +51,7 @@ export default {
             }
 
             try {
-                const response = await fetch('http://localhost:3000/api/availability', {
+                const response = await fetch('https://weekwork-production-9d89.up.railway.app/api/availability', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

@@ -20,27 +20,34 @@ function getNextWeekStart(date = new Date()) {
 const app = express();
 
 app.use(cors());
-
 app.use(express.json());
 
-const BOT_TOKEN  = '8854559282:AAFwPAD4gQLNMDFihLBF6lATZmsbIiiYQuA';
+// ===== КОРНЕВОЙ МАРШРУТ (для проверки) =====
+app.get('/', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        message: 'Бэкенд работает!',
+        endpoints: ['/api/availability', '/webapp-data']
+    });
+});
 
-const bot = new TelegramBot(BOT_TOKEN, {polling: true});
-
+// ===== TELEGRAM BOT =====
+const BOT_TOKEN = '8854559282:AAFwPAD4gQLNMDFihLBF6lATZmsbIiiYQuA';
+const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 const APP_URL = 'https://weekwork-app.vercel.app';
 
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-
     bot.sendMessage(chatId, `Привет, ${msg.from.first_name}`, {
         reply_markup: {
             inline_keyboard: [
-                [{text: 'Открыть приложение', web_app: { url: APP_URL } }]
+                [{ text: 'Открыть приложение', web_app: { url: APP_URL } }]
             ]
         }
     });
 });
 
+// ===== ЭНДПОИНТ ДЛЯ СОХРАНЕНИЯ ВЫБОРА =====
 app.post('/api/availability', async (req, res) => {
     try {
         const { telegram_id, days, desc } = req.body;
@@ -49,22 +56,28 @@ app.post('/api/availability', async (req, res) => {
             return res.status(400).json({ error: "Не хватает данных" });
         }
 
-        const { data: user, error: userError } = await supabase.from('users').select('id').eq('telegram_id', telegram_id).single();
+        const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('telegram_id', telegram_id)
+            .single();
 
         if (userError || !user) {
-            return res.status(404).json({ error: 'Пользователь не неайден'});
+            return res.status(404).json({ error: 'Пользователь не найден' });
         }
 
         const weekStart = getNextWeekStart();
 
-        const { data, error } = await supabase.from('weekly_availability').upsert({
-            worker_id: user.id,
-            week_start: weekStart,
-            days: days,
-            description: desc || ''
-        }, {
-            onConflict: 'worker_id, week_start'
-        });
+        const { error } = await supabase
+            .from('weekly_availability')
+            .upsert({
+                worker_id: user.id,
+                week_start: weekStart,
+                days: days,
+                description: desc || ''
+            }, {
+                onConflict: 'worker_id, week_start'
+            });
 
         if (error) {
             console.error('Ошибка сохранения:', error);
@@ -73,7 +86,7 @@ app.post('/api/availability', async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Данные сохранениы!',
+            message: 'Данные сохранены!',
             week_start: weekStart
         });
     } catch (err) {
@@ -82,14 +95,13 @@ app.post('/api/availability', async (req, res) => {
     }
 });
 
-
+// ===== ЭНДПОИНТ ДЛЯ ВЕБАПП ДАННЫХ =====
 app.post('/webapp-data', (req, res) => {
     console.log('Данные от приложения: ', req.body);
-
-    res.json({ok: true});
+    res.json({ ok: true });
 });
 
-
+// ===== ЗАПУСК =====
 app.listen(3000, () => {
-    console.log('Бэк заработааал урааа и запущен на http://localhost:3000');
+    console.log('✅ Бэкенд запущен на http://localhost:3000');
 });
