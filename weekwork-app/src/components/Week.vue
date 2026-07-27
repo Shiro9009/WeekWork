@@ -46,6 +46,7 @@ export default {
 
             const payload = {
                 telegram_id: this.$parent.user.id,
+                first_name: user.first_name || 'Пользователь',
                 days: this.days,
                 desc: this.desc,
             }

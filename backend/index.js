@@ -3,17 +3,9 @@ import cors from 'cors';
 import TelegramBot from 'node-telegram-bot-api';
 import { createClient } from '@supabase/supabase-js';
 
-// ==========================================
-// 1. ПОДКЛЮЧЕНИЕ К SUPABASE
-// ==========================================
-
-const supabaseUrl = 'https://uflyeztyiwgpginhvmuk.supabase.co'
-const supabaseKey = 'sb_publishable_agsPcqilP09Nxf_SKM4ETg_LfnzGXJ4'
-const supabase = createClient(supabaseUrl, supabaseKey)
-
-// ==========================================
-// 2. ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: следующая неделя
-// ==========================================
+const supabaseUrl = 'https://uflyeztyiwgpginhvmuk.supabase.co';
+const supabaseKey = 'sb_publishable_agsPcqilP09Nxf_SKM4ETg_LfnzGXJ4';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 function getNextWeekStart(date = new Date()) {
     const d = new Date(date);
@@ -22,20 +14,12 @@ function getNextWeekStart(date = new Date()) {
     const currentMonday = new Date(d.setDate(diff));
     const nextMonday = new Date(currentMonday);
     nextMonday.setDate(nextMonday.getDate() + 7);
-    return nextMonday.toISOString().split('T')[0]
+    return nextMonday.toISOString().split('T')[0];
 }
-
-// ==========================================
-// 3. НАСТРОЙКА EXPRESS
-// ==========================================
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-// ==========================================
-// 4. КОРНЕВОЙ МАРШРУТ (для проверки)
-// ==========================================
 
 app.get('/', (req, res) => {
     res.json({
@@ -44,10 +28,6 @@ app.get('/', (req, res) => {
         endpoints: ['/api/availability', '/webapp-data']
     });
 });
-
-// ==========================================
-// 5. TELEGRAM БОТ
-// ==========================================
 
 const BOT_TOKEN = '8854559282:AAFwPAD4gQLNMDFihLBF6lATZmsbIiiYQuA';
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
@@ -64,40 +44,33 @@ bot.onText(/\/start/, (msg) => {
     });
 });
 
-// ==========================================
-// 6. ЭНДПОИНТ ДЛЯ СОХРАНЕНИЯ ВЫБОРА РАБОТНИКА
-// ==========================================
-
 app.post('/api/availability', async (req, res) => {
     console.log('📥 Получен запрос:', req.body);
-    
-    try {
-        const { telegram_id, days, desc } = req.body;
 
-        // Проверяем, что данные пришли
+    try {
+        const { telegram_id, first_name, days, desc } = req.body;
+
         if (!telegram_id || !days) {
             console.log('❌ Не хватает данных');
             return res.status(400).json({ error: "Не хватает данных" });
         }
 
-        // 1. Ищем пользователя в таблице users
         console.log('🔍 Ищем пользователя с telegram_id:', telegram_id);
-        
+
         let { data: user, error: userError } = await supabase
             .from('users')
             .select('id')
             .eq('telegram_id', telegram_id)
             .single();
 
-        // Если пользователь не найден — создаём нового
         if (userError || !user) {
             console.log('👤 Пользователь не найден, создаём нового...');
-            
+
             const { data: newUser, error: createError } = await supabase
                 .from('users')
                 .insert({
                     telegram_id: telegram_id,
-                    name: 'Пользователь',
+                    name: first_name || 'Пользователь',
                     role: 'worker'
                 })
                 .select('id')
@@ -109,17 +82,23 @@ app.post('/api/availability', async (req, res) => {
             }
 
             user = newUser;
-            console.log('✅ Пользователь создан:', user);
+            console.log('✅ Пользователь создан с именем:', first_name);
         } else {
             console.log('✅ Пользователь найден:', user);
+
+            if (first_name && user.name !== first_name) {
+                console.log('🔄 Обновляем имя пользователя:', first_name);
+                await supabase
+                    .from('users')
+                    .update({ name: first_name })
+                    .eq('id', user.id);
+            }
         }
 
-        // 2. Определяем начало следующей недели
         const weekStart = getNextWeekStart();
         console.log('📅 Сохраняем для недели:', weekStart);
 
-        // 3. Сохраняем выбор дней в weekly_availability
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from('weekly_availability')
             .upsert({
                 worker_id: user.id,
@@ -148,18 +127,10 @@ app.post('/api/availability', async (req, res) => {
     }
 });
 
-// ==========================================
-// 7. ЭНДПОИНТ ДЛЯ ПРИЁМА ДАННЫХ ИЗ MINI APP
-// ==========================================
-
 app.post('/webapp-data', (req, res) => {
     console.log('📩 Данные от приложения:', req.body);
     res.json({ ok: true });
 });
-
-// ==========================================
-// 8. ЗАПУСК СЕРВЕРА
-// ==========================================
 
 app.listen(3000, () => {
     console.log('✅ Бэкенд запущен на http://localhost:3000');
