@@ -24,7 +24,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
     res.json({
         status: 'ok',
-        message: 'Бэкенд работает!',
+        message: 'Backend is running',
         endpoints: ['/api/availability', '/webapp-data']
     });
 });
@@ -35,27 +35,27 @@ const APP_URL = 'https://weekwork-app.vercel.app';
 
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, `Привет, ${msg.from.first_name} 👋`, {
+    bot.sendMessage(chatId, `Hello, ${msg.from.first_name}`, {
         reply_markup: {
             inline_keyboard: [
-                [{ text: '🚀 Открыть приложение', web_app: { url: APP_URL } }]
+                [{ text: 'Open app', web_app: { url: APP_URL } }]
             ]
         }
     });
 });
 
 app.post('/api/availability', async (req, res) => {
-    console.log('📥 Получен запрос:', req.body);
+    console.log('Request received:', req.body);
 
     try {
         const { telegram_id, first_name, days, desc } = req.body;
 
         if (!telegram_id || !days) {
-            console.log('❌ Не хватает данных');
-            return res.status(400).json({ error: "Не хватает данных" });
+            console.log('Missing data');
+            return res.status(400).json({ error: "Missing data" });
         }
 
-        console.log('🔍 Ищем пользователя с telegram_id:', telegram_id);
+        console.log('Looking for user with telegram_id:', telegram_id);
 
         let { data: user, error: userError } = await supabase
             .from('users')
@@ -64,30 +64,30 @@ app.post('/api/availability', async (req, res) => {
             .single();
 
         if (userError || !user) {
-            console.log('👤 Пользователь не найден, создаём нового...');
+            console.log('User not found, creating new one...');
 
             const { data: newUser, error: createError } = await supabase
                 .from('users')
                 .insert({
                     telegram_id: telegram_id,
-                    name: first_name || 'Пользователь',
+                    name: first_name || 'User',
                     role: 'worker'
                 })
                 .select('id')
                 .single();
 
             if (createError) {
-                console.error('❌ Ошибка создания пользователя:', createError);
-                return res.status(500).json({ error: 'Ошибка создания пользователя: ' + createError.message });
+                console.error('Error creating user:', createError);
+                return res.status(500).json({ error: 'Error creating user: ' + createError.message });
             }
 
             user = newUser;
-            console.log('✅ Пользователь создан с именем:', first_name);
+            console.log('User created with name:', first_name);
         } else {
-            console.log('✅ Пользователь найден:', user);
+            console.log('User found:', user);
 
             if (first_name && user.name !== first_name) {
-                console.log('🔄 Обновляем имя пользователя:', first_name);
+                console.log('Updating user name:', first_name);
                 await supabase
                     .from('users')
                     .update({ name: first_name })
@@ -96,7 +96,7 @@ app.post('/api/availability', async (req, res) => {
         }
 
         const weekStart = getNextWeekStart();
-        console.log('📅 Сохраняем для недели:', weekStart);
+        console.log('Saving for week:', weekStart);
 
         const { error } = await supabase
             .from('weekly_availability')
@@ -110,28 +110,28 @@ app.post('/api/availability', async (req, res) => {
             });
 
         if (error) {
-            console.error('❌ Ошибка сохранения в weekly_availability:', error);
-            return res.status(500).json({ error: 'Ошибка сохранения: ' + error.message });
+            console.error('Error saving to weekly_availability:', error);
+            return res.status(500).json({ error: 'Error saving: ' + error.message });
         }
 
-        console.log('✅ Данные сохранены успешно!');
+        console.log('Data saved successfully');
         res.json({
             success: true,
-            message: 'Данные сохранены!',
+            message: 'Data saved',
             week_start: weekStart
         });
 
     } catch (err) {
-        console.error('❌ КРИТИЧЕСКАЯ ОШИБКА:', err);
-        res.status(500).json({ error: 'Внутренняя ошибка сервера: ' + err.message });
+        console.error('Critical error:', err);
+        res.status(500).json({ error: 'Internal server error: ' + err.message });
     }
 });
 
 app.post('/webapp-data', (req, res) => {
-    console.log('📩 Данные от приложения:', req.body);
+    console.log('Data from app:', req.body);
     res.json({ ok: true });
 });
 
 app.listen(3000, () => {
-    console.log('✅ Бэкенд запущен на http://localhost:3000');
+    console.log('Backend running on http://localhost:3000');
 });
