@@ -1,24 +1,6 @@
 <template>
-  <!-- <h1>
-    Моё Telegram min-app
-  </h1>
-
-  <div>
-    <p v-if="user && user.first_name">Имя: {{ user.first_name }}</p>
-    <p v-if="user && user.username">Юзернейм: @{{ user.username }}</p>
-    <p v-if="!user">Пользователь не авторизован</p>
-  </div>
-
-  <div class="count">
-    <p>{{ amount }}</p>
-    <button @click="plus()">+</button>
-    <button @click="minus()">-</button>
-  </div>
-
-  <button class="send" @click="sendData()">Отправить данные боту</button> -->
   <Top :user="user"/>
   <Week/>
-  <description/>
 </template>
 
 <script>

@@ -29,7 +29,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 9px;
+        padding: 9px 11px;
         border-bottom-left-radius: 20px;
         border-bottom-right-radius: 20px;
     }

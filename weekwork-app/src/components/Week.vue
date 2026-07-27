@@ -39,9 +39,37 @@ export default {
         selector(day) {
             this.days[day] = this.days[day] === 1 ? 0 : 1
         },
-        sendData() {
-            this.days
-            this.desc
+        async sendData() {
+            if (!this.$parent.user) {
+                alert('Пользователь не авторизован')
+            }
+
+            const payload = {
+                telegram_id: this.$parent.user.id,
+                days: this.days,
+                desc: this.desc,
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/availability', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                })
+
+                const result = await response.json()
+
+                if (result.success) {
+                    alert('Данные сохранены')
+                } else {
+                    alert('Ошибка: ' + result.error)
+                }
+            } catch (error) {
+                console.error('Ошибка отправки:', error)
+                alert('Не удалось отправить данные')
+            }
         },
 
     }
@@ -88,24 +116,29 @@ button {
     top: 40vh;
     font-size: 20px;
     border: 1px solid rgb(146, 98, 190);
+    /* -webkit-tap-highlight-color: transparent; */
     transition: transform 200ms;
+    /* touch-action: manipulation; */
 }
 
 button:active {
+    /* -webkit-tap-highlight-color: transparent; */
     transform: scaleY(1.1);
     background-color: rgb(100, 25, 170);
 }
 
-.Descriprion {
-        width: 290px;
-        height: 100px;
-        outline: none;
-        padding: 10px;
-        font-size: 18px;
-        border-radius: 10px;
-    }
 
-    .Descriprion::placeholder {
-        font-size: 16px;
-    }
+
+.Descriprion {
+    width: 290px;
+    height: 100px;
+    outline: none;
+    padding: 10px;
+    font-size: 18px;
+    border-radius: 10px;
+}
+
+.Descriprion::placeholder {
+    font-size: 16px;
+}
 </style>
