@@ -96,12 +96,18 @@ bot.on('message', async (msg) => {
             }
         }
 
-        await supabase
+        const { error: sessionError } = await supabase
             .from('user_sessions')
             .upsert({
                 user_id: telegramId,
                 state: 'awaiting_role'
             });
+
+        if (sessionError) {
+            console.log('Ошибка создания сессии:', sessionError);
+        } else {
+            console.log('Сессия создана для пользователя:', telegramId);
+        }
 
         bot.sendMessage(chatId, 'Номер получен. Спасибо', {
             reply_markup: {
@@ -122,22 +128,45 @@ bot.on('message', async (msg) => {
 
     if (!text) return;
 
-    const { data, error } = await supabase.from('user_sessions').select('state').eq('user_id', telegramId).single();
+    const { data, error } = await supabase
+        .from('user_sessions')
+        .select('state')
+        .eq('user_id', telegramId)
+        .single();
 
-    if (data && data.state === 'awaiting_employer_phone') {
+    if (error) {
+        console.log('Ошибка получения состояния:', error);
+        return;
+    }
+
+    if (!data) {
+        console.log('Нет состояния для пользователя:', telegramId);
+        return;
+    }
+
+    if (data.state === 'awaiting_employer_phone') {
         const phoneNumber = cleanPhoneNumber(text);
-        const { data, error } = await supabase.from('users').select('id, name, phone_number').eq('phone_number', phoneNumber).eq('role', 'employer').single();
+        const { data: employer, error: findError } = await supabase
+            .from('users')
+            .select('id, name, phone_number')
+            .eq('phone_number', phoneNumber)
+            .eq('role', 'employer')
+            .single();
 
-        if (data && data.name) {
-            await supabase.from('users').update({ employer_id: data.id }).eq('telegram_id', telegramId);
+        if (employer) {
+            await supabase
+                .from('users')
+                .update({ employer_id: employer.id })
+                .eq('telegram_id', telegramId);
 
-            await bot.sendMessage(chatId, 'Ты привязан к работодателю ' + data.name + '!');
+            await supabase
+                .from('user_sessions')
+                .upsert({
+                    user_id: telegramId,
+                    state: 'completed'
+                });
 
-            await supabase.from('user_sessions').upsert({
-                user_id: telegramId,
-                state: 'completed'
-            });
-
+            await bot.sendMessage(chatId, 'Ты привязан к работодателю ' + employer.name + '!');
             await bot.sendMessage(chatId, 'Регистрация успешно пройдена', {
                 reply_markup: {
                     inline_keyboard: [
@@ -145,15 +174,11 @@ bot.on('message', async (msg) => {
                     ]
                 }
             });
-
         } else {
-            console.log('Работодатель не найден', error);
             await bot.sendMessage(chatId, 'Работодатель с таким номером не найден. Попробуйте снова.');
         }
 
-        console.log('Пользователь ждёт номер работодателя. Текст:', text);
-
-    } else if (data && data.state === 'completed') {
+    } else if (data.state === 'completed') {
         await bot.sendMessage(chatId, 'Добро пожаловать!', {
             reply_markup: {
                 inline_keyboard: [
@@ -161,10 +186,18 @@ bot.on('message', async (msg) => {
                 ]
             }
         });
-        console.log('Регистрация завершена');
 
+    } else if (data.state === 'awaiting_role') {
+        await bot.sendMessage(chatId, 'Пожалуйста, выберите роль', {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: 'Работник', callback_data: 'role_worker' }],
+                    [{ text: 'Работодатель', callback_data: 'role_employer' }],
+                ]
+            }
+        });
     } else {
-        console.log('Неизвестное состояние:', data ? data.state : 'null');
+        console.log('Неизвестное состояние:', data.state);
     }
 });
 
@@ -174,32 +207,42 @@ bot.on('callback_query', async (callbackQuery) => {
     const data = callbackQuery.data;
 
     if (data === 'role_worker') {
-        const { data, error } = await supabase.from('users').update({ role: 'worker' }).eq('telegram_id', telegramId);
+        const { error } = await supabase
+            .from('users')
+            .update({ role: 'worker' })
+            .eq('telegram_id', telegramId);
+
         if (error) {
-            console.log('Ошибка обновления роли', error);
+            console.log('Ошибка обновления роли:', error);
             await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
         } else {
             await bot.sendMessage(chatId, 'Ты выбран как работник');
-            await supabase.from('user_sessions').upsert({
-                user_id: telegramId,
-                state: 'awaiting_employer_phone'
-            });
-
+            await supabase
+                .from('user_sessions')
+                .upsert({
+                    user_id: telegramId,
+                    state: 'awaiting_employer_phone'
+                });
             await bot.sendMessage(chatId, 'Отправь номер телефона работодателя');
         }
 
-
     } else if (data === 'role_employer') {
-        const { data, error } = await supabase.from('users').update({ role: 'employer' }).eq('telegram_id', telegramId);
+        const { error } = await supabase
+            .from('users')
+            .update({ role: 'employer' })
+            .eq('telegram_id', telegramId);
+
         if (error) {
-            console.log('Ошибка обновления роли', error);
+            console.log('Ошибка обновления роли:', error);
             await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
         } else {
             await bot.sendMessage(chatId, 'Ты выбран как работодатель');
-            await supabase.from('user_sessions').upsert({
-                user_id: telegramId,
-                state: 'completed'
-            });
+            await supabase
+                .from('user_sessions')
+                .upsert({
+                    user_id: telegramId,
+                    state: 'completed'
+                });
             await bot.sendMessage(chatId, 'Добро пожаловать!', {
                 reply_markup: {
                     inline_keyboard: [
