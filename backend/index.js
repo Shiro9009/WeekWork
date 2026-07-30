@@ -70,14 +70,30 @@ bot.on('message', async (msg) => {
                 .from('users')
                 .update({ telegram_id: telegramId })
                 .eq('phone_number', phoneNumber);
+            console.log('Пользователь обновлён');
         } else {
-            await supabase
+            const { data: userByTelegram, error: findTelegramError } = await supabase
                 .from('users')
-                .insert({
-                    telegram_id: telegramId,
-                    phone_number: phoneNumber,
-                    name: msg.from.first_name || 'Пользователь'
-                });
+                .select('id, phone_number')
+                .eq('telegram_id', telegramId)
+                .single();
+
+            if (userByTelegram) {
+                await supabase
+                    .from('users')
+                    .update({ phone_number: phoneNumber })
+                    .eq('telegram_id', telegramId);
+                console.log('Добавлен номер для существующего пользователя');
+            } else {
+                await supabase
+                    .from('users')
+                    .insert({
+                        telegram_id: telegramId,
+                        phone_number: phoneNumber,
+                        name: msg.from.first_name || 'Пользователь'
+                    });
+                console.log('Создан новый пользователь');
+            }
         }
 
         await supabase
@@ -113,7 +129,7 @@ bot.on('message', async (msg) => {
         const { data, error } = await supabase.from('users').select('id, name, phone_number').eq('phone_number', phoneNumber).eq('role', 'employer').single();
 
         if (data && data.name) {
-            const { data, error } = await supabase.from('users').update({ employer_id: data.id }).eq('telegram_id', telegramId);
+            await supabase.from('users').update({ employer_id: data.id }).eq('telegram_id', telegramId);
 
             await bot.sendMessage(chatId, 'Ты привязан к работодателю ' + data.name + '!');
 
