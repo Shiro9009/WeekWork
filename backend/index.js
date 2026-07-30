@@ -37,7 +37,7 @@ bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
     bot.sendMessage(chatId, 'Регистрация', {
         reply_markup: {
-            keyboard: [
+            inline_keyboard: [
                 [{ text: 'Регистрация', request_contact: true }]
             ],
             resize_keyboard: true,
