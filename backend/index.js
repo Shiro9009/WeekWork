@@ -35,9 +35,9 @@ const APP_URL = 'https://weekwork-app.vercel.app';
 
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, 'Регистрация', {
+    bot.sendMessage(chatId, 'Нажмите кнопку, чтобы отправить номер телефона', {
         reply_markup: {
-            inline_keyboard: [
+            keyboard: [
                 [{ text: 'Регистрация', request_contact: true }]
             ],
             resize_keyboard: true,
