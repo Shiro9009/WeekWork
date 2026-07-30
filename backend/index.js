@@ -53,6 +53,7 @@ bot.onText(/\/start/, (msg) => {
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const telegramId = msg.from.id;
+    const text = msg.text;
 
     if (msg.contact) {
         const phoneNumber = cleanPhoneNumber(msg.contact.phone_number);
@@ -100,58 +101,8 @@ bot.on('message', async (msg) => {
                 ]
             }
         });
+        return;
     }
-});
-
-bot.on('callback_query', async (callbackQuery) => {
-    const chatId = callbackQuery.message.chat.id;
-    const telegramId = callbackQuery.from.id;
-    const data = callbackQuery.data;
-
-    if (data === 'role_worker') {
-        const { data, error } = await supabase.from('users').update({ role: 'worker' }).eq('telegram_id', telegramId);
-        if (error) {
-            console.log('Ошибка обновления роли', error);
-            await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
-        } else {
-            await bot.sendMessage(chatId, 'Ты выбран как работник');
-            await supabase.from('user_sessions').upsert({
-                user_id: telegramId,
-                state: 'awaiting_employer_phone'
-            });
-
-            await bot.sendMessage(chatId, 'Отправь номер телефона работодателя');
-        }
-
-
-    } else if (data === 'role_employer') {
-        const { data, error } = await supabase.from('users').update({ role: 'employer' }).eq('telegram_id', telegramId);
-        if (error) {
-            console.log('Ошибка обновления роли', error);
-            await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
-        } else {
-            await bot.sendMessage(chatId, 'Ты выбран как работодатель');
-            await supabase.from('user_sessions').upsert({
-                user_id: telegramId,
-                state: 'completed'
-            });
-            await bot.sendMessage(chatId, 'Добро пожаловать!', {
-                reply_markup: {
-                    inline_keyboard: [
-                        [{ text: 'Открыть приложение', web_app: { url: APP_URL } }]
-                    ]
-                }
-            });
-        }
-    }
-
-    await bot.answerCallbackQuery(callbackQuery.id);
-});
-
-bot.on('message', async (msg) => {
-    const chatId = msg.chat.id;
-    const telegramId = msg.from.id;
-    const text = msg.text;
 
     if (!text) return;
 
@@ -199,6 +150,51 @@ bot.on('message', async (msg) => {
     } else {
         console.log('Неизвестное состояние:', data ? data.state : 'null');
     }
+});
+
+bot.on('callback_query', async (callbackQuery) => {
+    const chatId = callbackQuery.message.chat.id;
+    const telegramId = callbackQuery.from.id;
+    const data = callbackQuery.data;
+
+    if (data === 'role_worker') {
+        const { data, error } = await supabase.from('users').update({ role: 'worker' }).eq('telegram_id', telegramId);
+        if (error) {
+            console.log('Ошибка обновления роли', error);
+            await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
+        } else {
+            await bot.sendMessage(chatId, 'Ты выбран как работник');
+            await supabase.from('user_sessions').upsert({
+                user_id: telegramId,
+                state: 'awaiting_employer_phone'
+            });
+
+            await bot.sendMessage(chatId, 'Отправь номер телефона работодателя');
+        }
+
+
+    } else if (data === 'role_employer') {
+        const { data, error } = await supabase.from('users').update({ role: 'employer' }).eq('telegram_id', telegramId);
+        if (error) {
+            console.log('Ошибка обновления роли', error);
+            await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
+        } else {
+            await bot.sendMessage(chatId, 'Ты выбран как работодатель');
+            await supabase.from('user_sessions').upsert({
+                user_id: telegramId,
+                state: 'completed'
+            });
+            await bot.sendMessage(chatId, 'Добро пожаловать!', {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: 'Открыть приложение', web_app: { url: APP_URL } }]
+                    ]
+                }
+            });
+        }
+    }
+
+    await bot.answerCallbackQuery(callbackQuery.id);
 });
 
 app.post('/api/availability', async (req, res) => {
