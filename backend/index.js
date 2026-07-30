@@ -17,6 +17,10 @@ function getNextWeekStart(date = new Date()) {
     return nextMonday.toISOString().split('T')[0];
 }
 
+function cleanPhoneNumber(phone) {
+    return phone.replace(/\D/g, '');
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -46,16 +50,41 @@ bot.onText(/\/start/, (msg) => {
     });
 });
 
-bot.on('message', (msg) => {
+bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
+    const telegramId = msg.from.id;
+    
     if (msg.contact) {
-        const phoneNumber = msg.contact.phone_number;
-        console.log('Номер пользователя: ', phoneNumber)
+        const phoneNumber = cleanPhoneNumber(msg.contact.phone_number);
+        console.log('Номер пользователя:', phoneNumber);
+        
+        const { data: existingUser, error: findError } = await supabase
+            .from('users')
+            .select('id, telegram_id')
+            .eq('phone_number', phoneNumber)
+            .single();
+        
+        if (existingUser) {
+            await supabase
+                .from('users')
+                .update({ telegram_id: telegramId })
+                .eq('phone_number', phoneNumber);
+        } else {
+            await supabase
+                .from('users')
+                .insert({
+                    telegram_id: telegramId,
+                    phone_number: phoneNumber,
+                    name: msg.from.first_name || 'Пользователь'
+                });
+        }
+        
         bot.sendMessage(chatId, 'Номер получен. Спасибо)', {
             reply_markup: {
                 remove_keyboard: true
             }
         });
+        
         bot.sendMessage(chatId, 'Подскажите, кто вы: работник или работодатель?', {
             reply_markup: {
                 inline_keyboard: [
@@ -65,7 +94,7 @@ bot.on('message', (msg) => {
             }
         });
     }
-})
+});
 
 bot.on('callback_query', async (callbackQuery) => {
     const chatId = callbackQuery.message.chat.id;
@@ -76,9 +105,9 @@ bot.on('callback_query', async (callbackQuery) => {
         const {data, error} = await supabase.from('users').update({role: 'worker'}).eq('telegram_id', telegramId);
          if (error) {
             console.log('Ошибка обновления ролей', error);
-            await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли')
+            await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
          } else {
-            await bot.sendMessage(chatId, 'Ты выбран как работник')
+            await bot.sendMessage(chatId, 'Ты выбран как работник');
             await supabase.from('user_sessions').upsert({
                 user_id: telegramId,
                 state: 'awaiting_employer_phone'
@@ -92,13 +121,20 @@ bot.on('callback_query', async (callbackQuery) => {
         const {data, error} = await supabase.from('users').update({role: 'employer'}).eq('telegram_id', telegramId);
          if (error) {
             console.log('Ошибка обновления ролей', error);
-            await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли')
+            await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
          } else {
-            await bot.sendMessage(chatId, 'Ты выбран как работодатель')
+            await bot.sendMessage(chatId, 'Ты выбран как работодатель');
             await supabase.from('user_sessions').upsert({
                 user_id: telegramId,
-                state: 'complited'
-            })
+                state: 'completed'
+            });
+            await bot.sendMessage(chatId, 'Добро пожаловать!', {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: 'Открыть приложение', web_app: { url: APP_URL } }]
+                    ]
+                }
+            });
          }
     }
 
@@ -110,16 +146,18 @@ bot.on('message', async(msg) => {
     const telegramId = msg.from.id;
     const text = msg.text;
 
+    if (!text) return;
+
     const {data, error} = await supabase.from('user_sessions').select('state').eq('user_id', telegramId).single();
     
     if (data && data.state === 'awaiting_employer_phone') {
-        const phoneNumber = text;
+        const phoneNumber = cleanPhoneNumber(text);
         const {data, error} = await supabase.from('users').select('id, name, phone_number').eq('phone_number', phoneNumber).eq('role', 'employer').single();
         
         if (data && data.name) {
-            const {data, error} = await supabase.from('users').update({employer_id: data.id}).eq('telegram_id', telegramId)
+            const {data, error} = await supabase.from('users').update({employer_id: data.id}).eq('telegram_id', telegramId);
 
-            await bot.sendMessage(chatId, `Ты привязан к работодателю ${data.name}!`);
+            await bot.sendMessage(chatId, 'Ты привязан к работодателю ' + data.name + '!');
 
             await supabase.from('user_sessions').upsert({
                 user_id: telegramId,
@@ -141,7 +179,7 @@ bot.on('message', async(msg) => {
 
         console.log('Пользователь ждёт номер работодателя. Текст:', text);
         
-    } else if (data && data.state === 'complited') {
+    } else if (data && data.state === 'completed') {
         await bot.sendMessage(chatId, 'Добро пожаловать!', {
             reply_markup: {
                 inline_keyboard: [
@@ -152,25 +190,9 @@ bot.on('message', async(msg) => {
         console.log('Регистрация завершена');
         
     } else {
-        console.log('Неизвестное состояние:', data.state);
+        console.log('Неизвестное состояние:', data ? data.state : 'null');
     }
-})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+});
 
 app.post('/api/availability', async (req, res) => {
     console.log('Request received:', req.body);
