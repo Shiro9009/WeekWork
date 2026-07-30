@@ -35,14 +35,39 @@ const APP_URL = 'https://weekwork-app.vercel.app';
 
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
-    bot.sendMessage(chatId, `Hello, ${msg.from.first_name}`, {
+    bot.sendMessage(chatId, 'Регистрация', {
         reply_markup: {
-            inline_keyboard: [
-                [{ text: 'Open app', web_app: { url: APP_URL } }]
-            ]
+            keyboard: [
+                [[{ text: 'Регистрация', request_contact: true }]]
+            ],
+            resize_keyboard: true,
+            one_time_keyboard: true
         }
     });
+    bot.on('message', (msg) => {
+        if (msg.contact) {
+            const phoneNumber = msg.contact.phone_number;
+            console.log('Номер пользователя: ', phoneNumber)
+        }
+    })
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 app.post('/api/availability', async (req, res) => {
     console.log('Request received:', req.body);

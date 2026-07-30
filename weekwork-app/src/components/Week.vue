@@ -46,7 +46,7 @@ export default {
 
             const payload = {
                 telegram_id: this.$parent.user.id,
-                first_name: user.first_name || 'Пользователь',
+                first_name: this.$parent.user.first_name || 'Пользователь',
                 days: this.days,
                 desc: this.desc,
             }
@@ -86,7 +86,7 @@ ul {
     display: flex;
     justify-content: center;
     gap: 5px;
-    margin-top: 50px;
+    margin: 50px 10px 0;
 }
 
 li {
@@ -141,5 +141,25 @@ button:active {
 
 .Descriprion::placeholder {
     font-size: 16px;
+}
+
+@media (max-wight: 375) {
+    ul {
+    display: flex;
+    justify-content: center;
+    gap: 3px;
+    margin-top: 50px;
+    }
+
+    li {
+    list-style: none;
+    background-color: #fff;
+    padding: 8px;
+    border-radius: 10px;
+    border: 2px solid rgb(146, 98, 190);
+    width: 30px;
+    color: rgb(146, 98, 190);
+    transition: transform 200ms;
+    }
 }
 </style>
