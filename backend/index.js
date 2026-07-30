@@ -223,6 +223,11 @@ bot.on('callback_query', async (callbackQuery) => {
                     user_id: telegramId,
                     state: 'awaiting_employer_phone'
                 });
+
+            const {data, error} = await supabase.from('users').select('employer_id').eq('telegrma_id', telegramId)
+            if (data.employer_id) {
+                await supabase.from(users).update({ employer_id: null }).eq('telegram_id', telegramId)
+            }
             await bot.sendMessage(chatId, 'Отправь номер телефона работодателя');
         }
 
@@ -348,4 +353,3 @@ app.listen(3000, () => {
     console.log('Бэкенд запущен на http://localhost:3000');
 });
 
-// lol
