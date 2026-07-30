@@ -28,7 +28,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
     res.json({
         status: 'ok',
-        message: 'Backend is running',
+        message: 'Бэкенд работает',
         endpoints: ['/api/availability', '/webapp-data']
     });
 });
@@ -86,7 +86,7 @@ bot.on('message', async (msg) => {
                 state: 'awaiting_role'
             });
 
-        bot.sendMessage(chatId, 'Номер получен. Спасибо)', {
+        bot.sendMessage(chatId, 'Номер получен. Спасибо', {
             reply_markup: {
                 remove_keyboard: true
             }
@@ -111,7 +111,7 @@ bot.on('callback_query', async (callbackQuery) => {
     if (data === 'role_worker') {
         const { data, error } = await supabase.from('users').update({ role: 'worker' }).eq('telegram_id', telegramId);
         if (error) {
-            console.log('Ошибка обновления ролей', error);
+            console.log('Ошибка обновления роли', error);
             await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
         } else {
             await bot.sendMessage(chatId, 'Ты выбран как работник');
@@ -127,7 +127,7 @@ bot.on('callback_query', async (callbackQuery) => {
     } else if (data === 'role_employer') {
         const { data, error } = await supabase.from('users').update({ role: 'employer' }).eq('telegram_id', telegramId);
         if (error) {
-            console.log('Ошибка обновления ролей', error);
+            console.log('Ошибка обновления роли', error);
             await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
         } else {
             await bot.sendMessage(chatId, 'Ты выбран как работодатель');
@@ -202,17 +202,17 @@ bot.on('message', async (msg) => {
 });
 
 app.post('/api/availability', async (req, res) => {
-    console.log('Request received:', req.body);
+    console.log('Запрос получен:', req.body);
 
     try {
         const { telegram_id, first_name, days, desc } = req.body;
 
         if (!telegram_id || !days) {
-            console.log('Missing data');
-            return res.status(400).json({ error: "Missing data" });
+            console.log('Не хватает данных');
+            return res.status(400).json({ error: "Не хватает данных" });
         }
 
-        console.log('Looking for user with telegram_id:', telegram_id);
+        console.log('Поиск пользователя с telegram_id:', telegram_id);
 
         let { data: user, error: userError } = await supabase
             .from('users')
@@ -221,30 +221,30 @@ app.post('/api/availability', async (req, res) => {
             .single();
 
         if (userError || !user) {
-            console.log('User not found, creating new one...');
+            console.log('Пользователь не найден, создаём нового...');
 
             const { data: newUser, error: createError } = await supabase
                 .from('users')
                 .insert({
                     telegram_id: telegram_id,
-                    name: first_name || 'User',
+                    name: first_name || 'Пользователь',
                     role: 'worker'
                 })
                 .select('id')
                 .single();
 
             if (createError) {
-                console.error('Error creating user:', createError);
-                return res.status(500).json({ error: 'Error creating user: ' + createError.message });
+                console.error('Ошибка создания пользователя:', createError);
+                return res.status(500).json({ error: 'Ошибка создания пользователя: ' + createError.message });
             }
 
             user = newUser;
-            console.log('User created with name:', first_name);
+            console.log('Пользователь создан с именем:', first_name);
         } else {
-            console.log('User found:', user);
+            console.log('Пользователь найден:', user);
 
             if (first_name && user.name !== first_name) {
-                console.log('Updating user name:', first_name);
+                console.log('Обновление имени пользователя:', first_name);
                 await supabase
                     .from('users')
                     .update({ name: first_name })
@@ -253,7 +253,7 @@ app.post('/api/availability', async (req, res) => {
         }
 
         const weekStart = getNextWeekStart();
-        console.log('Saving for week:', weekStart);
+        console.log('Сохранение для недели:', weekStart);
 
         const { error } = await supabase
             .from('weekly_availability')
@@ -267,28 +267,28 @@ app.post('/api/availability', async (req, res) => {
             });
 
         if (error) {
-            console.error('Error saving to weekly_availability:', error);
-            return res.status(500).json({ error: 'Error saving: ' + error.message });
+            console.error('Ошибка сохранения в weekly_availability:', error);
+            return res.status(500).json({ error: 'Ошибка сохранения: ' + error.message });
         }
 
-        console.log('Data saved successfully');
+        console.log('Данные успешно сохранены');
         res.json({
             success: true,
-            message: 'Data saved',
+            message: 'Данные сохранены',
             week_start: weekStart
         });
 
     } catch (err) {
-        console.error('Critical error:', err);
-        res.status(500).json({ error: 'Internal server error: ' + err.message });
+        console.error('Критическая ошибка:', err);
+        res.status(500).json({ error: 'Внутренняя ошибка сервера: ' + err.message });
     }
 });
 
 app.post('/webapp-data', (req, res) => {
-    console.log('Data from app:', req.body);
+    console.log('Данные от приложения:', req.body);
     res.json({ ok: true });
 });
 
 app.listen(3000, () => {
-    console.log('Backend running on http://localhost:3000');
+    console.log('Бэкенд запущен на http://localhost:3000');
 });
