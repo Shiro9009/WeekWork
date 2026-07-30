@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import TelegramBot from 'node-telegram-bot-api';
 import { createClient } from '@supabase/supabase-js';
+import { Children } from 'react';
 
 const supabaseUrl = 'https://uflyeztyiwgpginhvmuk.supabase.co';
 const supabaseKey = 'sb_publishable_agsPcqilP09Nxf_SKM4ETg_LfnzGXJ4';
@@ -38,7 +39,7 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, 'Нажмите кнопку, чтобы отправить номер телефона', {
         reply_markup: {
             keyboard: [
-                [{ text: 'Регистрация', request_contact: true }]
+                [{ text: 'Отправить', request_contact: true }]
             ],
             resize_keyboard: true,
             one_time_keyboard: true
@@ -47,9 +48,16 @@ bot.onText(/\/start/, (msg) => {
 });
 
 bot.on('message', (msg) => {
+    const chatId = msg.chat.id;
     if (msg.contact) {
         const phoneNumber = msg.contact.phone_number;
         console.log('Номер пользователя: ', phoneNumber)
+        bot.sendMessage(chatId, 'Номер получен. Спасибо)', {
+            reply_markup: {
+                remove_keyboard: true
+            }
+        });
+        bot.sendMessage(chatId, 'Подскажите, кто вы: работник или работодатель?');
     }
 })
 
