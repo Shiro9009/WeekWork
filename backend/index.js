@@ -347,3 +347,5 @@ app.post('/webapp-data', (req, res) => {
 app.listen(3000, () => {
     console.log('Бэкенд запущен на http://localhost:3000');
 });
+
+// lol
