@@ -38,7 +38,7 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, 'Регистрация', {
         reply_markup: {
             keyboard: [
-                [[{ text: 'Регистрация', request_contact: true }]]
+                [{ text: 'Регистрация', request_contact: true }]
             ],
             resize_keyboard: true,
             one_time_keyboard: true
