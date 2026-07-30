@@ -224,9 +224,9 @@ bot.on('callback_query', async (callbackQuery) => {
                     state: 'awaiting_employer_phone'
                 });
 
-            const {data, error} = await supabase.from('users').select('role, employer_id').eq('telegrma_id', telegramId)
-            if (data.role === 'employer' && data.employer_id) {
-                await supabase.from(users).update({ employer_id: null }).eq('telegram_id', telegramId)
+            const {data, error} = await supabase.from('users').select('role, employer_id').eq('telegram_id', telegramId)
+            if (data && data.role === 'employer' && data.employer_id) {
+                await supabase.from('users').update({ employer_id: null }).eq('telegram_id', telegramId)
             }
             await bot.sendMessage(chatId, 'Отправь номер телефона работодателя');
         }
