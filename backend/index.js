@@ -44,14 +44,14 @@ bot.onText(/\/start/, (msg) => {
             one_time_keyboard: true
         }
     });
-    bot.on('message', (msg) => {
-        if (msg.contact) {
-            const phoneNumber = msg.contact.phone_number;
-            console.log('Номер пользователя: ', phoneNumber)
-        }
-    })
 });
 
+bot.on('message', (msg) => {
+    if (msg.contact) {
+        const phoneNumber = msg.contact.phone_number;
+        console.log('Номер пользователя: ', phoneNumber)
+    }
+})
 
 
 
