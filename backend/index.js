@@ -74,6 +74,7 @@ bot.onText(/\/reset/, async (msg) => {
     const chatId = msg.chat.id;
 
     await supabase.from('users').update({ role: null, employer_id: null }).eq('telegram_id', telegramId);
+    await supabase.from('user_sessions').update({ state: null }).eq('user_id', telegramId);
     await bot.sendMessage(chatId, 'Профиль сброщен')
 })
 
@@ -265,10 +266,6 @@ bot.on('callback_query', async (callbackQuery) => {
             await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
         } else {
             await bot.sendMessage(chatId, 'Ты выбран как работодатель');
-            const {data, error} = await supabase.from('users').select('employer_id').eq('telegram_id', telegramId)
-            if (data && data.employer_id) {
-                await supabase.from('users').update({ employer_id: null }).eq('telegram_id', telegramId)
-            }
             await supabase
                 .from('user_sessions')
                 .upsert({
