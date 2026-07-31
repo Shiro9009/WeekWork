@@ -37,8 +37,27 @@ const BOT_TOKEN = '8854559282:AAFwPAD4gQLNMDFihLBF6lATZmsbIiiYQuA';
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 const APP_URL = 'https://weekwork-app.vercel.app';
 
-bot.onText(/\/start/, (msg) => {
+bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
+    const telegramId = msg.from.id;
+
+    const { data, error } = await supabase
+        .from('user_sessions')
+        .select('state')
+        .eq('user_id', telegramId)
+        .single();
+
+    if (data && data.state === 'completed') {
+        await bot.sendMessage(chatId, 'Добро пожаловать!', {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: 'Открыть приложение', web_app: { url: APP_URL } }]
+                ]
+            }
+        });
+        return;
+    }
+
     bot.sendMessage(chatId, 'Нажмите кнопку, чтобы отправить номер телефона', {
         reply_markup: {
             keyboard: [
@@ -224,10 +243,6 @@ bot.on('callback_query', async (callbackQuery) => {
                     state: 'awaiting_employer_phone'
                 });
 
-            const {data, error} = await supabase.from('users').select('role, employer_id').eq('telegram_id', telegramId)
-            if (data && data.role === 'employer' && data.employer_id) {
-                await supabase.from('users').update({ employer_id: null }).eq('telegram_id', telegramId)
-            }
             await bot.sendMessage(chatId, 'Отправь номер телефона работодателя');
         }
 
@@ -242,6 +257,10 @@ bot.on('callback_query', async (callbackQuery) => {
             await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
         } else {
             await bot.sendMessage(chatId, 'Ты выбран как работодатель');
+            const {data, error} = await supabase.from('users').select('employer_id').eq('telegram_id', telegramId)
+            if (data && data.employer_id) {
+                await supabase.from('users').update({ employer_id: null }).eq('telegram_id', telegramId)
+            }
             await supabase
                 .from('user_sessions')
                 .upsert({
