@@ -73,7 +73,7 @@ bot.onText(/\/reset/, async (msg) => {
     const telegramId = msg.from.id;
     const chatId = msg.chat.id;
 
-    await supabase.from('user_sessions').update({ state: null }).eq('user_id', telegramId);
+    await supabase.from('user_sessions').delete().eq('user_id', telegramId);
     await supabase.from('users').update({ role: null, employer_id: null }).eq('telegram_id', telegramId);
     await bot.sendMessage(chatId, 'Профиль сброщен')
 })
