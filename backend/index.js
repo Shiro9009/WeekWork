@@ -83,6 +83,10 @@ bot.on('message', async (msg) => {
     const telegramId = msg.from.id;
     const text = msg.text;
 
+    if (text === '/start' || text === '/reset') {
+        return;
+    }
+
     if (msg.contact) {
         const phoneNumber = cleanPhoneNumber(msg.contact.phone_number);
         console.log('Номер пользователя:', phoneNumber);
@@ -123,6 +127,7 @@ bot.on('message', async (msg) => {
                 console.log('Создан новый пользователь');
             }
         }
+
 
         const { error: sessionError } = await supabase
             .from('user_sessions')
@@ -194,7 +199,7 @@ bot.on('message', async (msg) => {
                     state: 'completed'
                 });
 
-            await bot.sendMessage(chatId, 'Ты привязан к работодателю ' + employer.name + '!');
+            await bot.sendMessage(chatId, 'Ты привязан к работодателю ' + employer.name);
             await bot.sendMessage(chatId, 'Регистрация успешно пройдена', {
                 reply_markup: {
                     inline_keyboard: [
