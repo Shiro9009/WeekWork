@@ -37,6 +37,6 @@ app.use(routes);
 app.use(employerRoutes);
 
 const PORT = 3000;
-app.listen(PORT, () => {
-    console.log(`Бэкенд запущен на http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Бэкенд запущен на http://0.0.0.0:${PORT}`);
 });
