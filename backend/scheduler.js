@@ -117,10 +117,10 @@ function generateSimpleSchedule(workers, availabilityMap) {
 
         if (available.length > 0) {
             const shuffled = [...available].sort(() => Math.random() - 0.5);
-            schedule[day] = shuffled.slice(0, 2).map(w => w.name);
+            schedule[day] = shuffled.slice(0, 1).map(w => w.name); // ← было 2, стало 1
         } else {
             const shuffled = [...workers].sort(() => Math.random() - 0.5);
-            schedule[day] = shuffled.slice(0, 2).map(w => w.name);
+            schedule[day] = shuffled.slice(0, 1).map(w => w.name); // ← было 2, стало 1
         }
     }
 

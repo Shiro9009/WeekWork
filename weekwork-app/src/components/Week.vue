@@ -17,7 +17,7 @@
 </template>
 
 <script>
-const API_URL = 'https://weekwork-production-9d89.up.railway.app';
+const API_URL = 'https://weekwork-production-381f.up.railway.app';
 
 export default {
     props: {
