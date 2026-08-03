@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { createClient } from '@supabase/supabase-js';
 import routes from './routes.js';
+import employerRoutes from './employerRoutes.js';
 import { bot, APP_URL } from './bot.js';
 import './handlers.js';
 
@@ -21,6 +22,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(routes);
+app.use(employerRoutes);
 
 const PORT = 3000;
 app.listen(PORT, () => {
