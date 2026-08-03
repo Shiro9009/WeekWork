@@ -1,6 +1,6 @@
 import express from "express";
 import { supabase } from "./index.js";
-import { getNextWeekStart } from "./scheduler.js";
+import { getNextWeekStart, generationSchedule } from "./scheduler.js";
 
 const router = express.Router();
 
@@ -80,6 +80,48 @@ router.post('/api/availability', async (req, res) => {
             message: 'Данные сохранены',
             week_start: weekStart
         });
+
+        const { data: worker, error: workerError } = await supabase
+            .from('users')
+            .select('id, employer_id')
+            .eq('telegram_id', telegram_id)
+            .single();
+
+        if (workerError || !worker || !worker.employer_id) {
+            console.log('У работника нет employer_id, пропускаем проверку');
+            return;
+        }
+
+        const employerId = worker.employer_id;
+        console.log('работодатель ID', employerId);
+
+        const { data: workers, error: workersError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('employer_id', employerId)
+            .eq('role', 'worker');
+
+        if (workersError || !workers || workers.length === 0) {
+            console.log('Нет работников у этого работодателя');
+            return;
+        }
+
+        const workerIds = workers.map(w => w.id);
+
+        const { count: respondedCount } = await supabase
+            .from('weekly_availability')
+            .select('worker_id', { count: 'exact', head: true })
+            .eq('week_start', weekStart)
+            .in('worker_id', workerIds);
+
+        if (workers.length === respondedCount) {
+            console.log('Все работники ответили))))) Генерирую расписание');
+            await generationSchedule(employerId, weekStart);
+
+        } else {
+            console.log(`Ответило ${respondedCount} из ${workers.length} работников`);
+        }
+
 
     } catch (err) {
         console.error('Критическая ошибка:', err);
