@@ -1,4 +1,5 @@
 import { supabase } from "./index.js";
+import { bot, APP_URL } from "./bot.js";
 
 export function getNextWeekStart(date = new Date()) {
     const d = new Date(date);
@@ -14,67 +15,98 @@ export function cleanPhoneNumber(phone) {
     return phone.replace(/\D/g, '');
 }
 
-export async function generationSchedule (employerId, weekStart) {
-    console.log('геренация расписания для ', empoyerId);
+export async function generationSchedule(employerId, weekStart) {
+    console.log('Генерация расписания для ', employerId);
 
-    const { data: workers } = await supabase
+    const { data: workers, error: workersError } = await supabase
         .from('users')
         .select('id, name')
         .eq('employer_id', employerId)
         .eq('role', 'worker');
 
-    if (!workers || workers.length === 0 ) {
-        console.log('Нет работнков');
+    if (workersError || !workers || workers.length === 0) {
+        console.log('Нет работников');
         return;
     }
 
     const workerIds = workers.map(w => w.id);
-    const { data: availability } = await supabase
+
+    const { data: availability, error: availabilityError } = await supabase
         .from('weekly_availability')
         .select('worker_id, days')
         .eq('week_start', weekStart)
         .in('worker_id', workerIds);
-    
-    const schedule = generateSimpleSchedule(workers, availability);
 
-    const { error } = await supabase
+    if (availabilityError || !availability) {
+        console.log('Нет данных о выборе дней');
+        return;
+    }
+
+    const availabilityMap = {};
+    for (const item of availability) {
+        availabilityMap[item.worker_id] = item.days;
+    }
+
+    const schedule = generateSimpleSchedule(workers, availabilityMap);
+
+    const { error: insertError } = await supabase
         .from('shift_options')
         .insert({
             employer_id: employerId,
             week_start: weekStart,
             option_number: 1,
             schedule: schedule
-        })
+        });
 
-    if (error) {
-        console.log('Ошибка сохранения расписания', error);
+    if (insertError) {
+        console.log('Ошибка сохранения расписания', insertError);
         return;
     }
 
-    console.log('Расписание сохранено')
+    console.log('Расписание сохранено');
+
+    const { data: employer, error: employerError } = await supabase
+        .from('users')
+        .select('telegram_id')
+        .eq('id', employerId)
+        .single();
+
+    if (!employerError && employer) {
+        const employerTelegramId = employer.telegram_id;
+        await bot.sendMessage(
+            employerTelegramId,
+            'Все работники выбрали дни! Варианты расписания готовы.',
+            {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: 'Посмотреть варианты', web_app: { url: APP_URL } }]
+                    ]
+                }
+            }
+        );
+        console.log('Уведомление отправлено работодателю');
+    } else {
+        console.log('Не удалось найти работодателя');
+    }
 }
 
-function geerateSimpleSchedule (workers, availability) {
+function generateSimpleSchedule(workers, availabilityMap) {
     const daysOfWeek = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
     const schedule = {};
 
-    const shuffled = [...workers].sort(() => Math.random() - 0.5);
+    for (const day of daysOfWeek) {
+        const available = workers.filter(w => {
+            const days = availabilityMap[w.id];
+            return days && days[day] === 1;
+        });
 
-    let dayIndex = 0;
-    for ( const worker of shuffled) {
-        for (let i = 0; i > 2; i++) {
-            const day = daysOfWeek[dayIndex % 7];
-            if (!schedule[day]) schedule[day] = [];
-            schedule[day].push(worker.name);
-            dayIndex++;
+        if (available.length > 0) {
+            const shuffled = [...available].sort(() => Math.random() - 0.5);
+            schedule[day] = shuffled.slice(0, 2).map(w => w.name);
+        } else {
+            const shuffled = [...workers].sort(() => Math.random() - 0.5);
+            schedule[day] = shuffled.slice(0, 2).map(w => w.name);
         }
-    }
-
-    if (dayIndex < 7) {
-        const remainingDay = daysOfWeek[dayIndex];
-        const randomWorker = shuffled[Math.floor(Math.random() * shuffled.length)];
-        if (!schedule[remainingDay]) schedule[remainingDay] = [];
-        schedule[remainingDay].push(randomWorker.name);
     }
 
     return schedule;

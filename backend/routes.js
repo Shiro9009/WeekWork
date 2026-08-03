@@ -74,54 +74,50 @@ router.post('/api/availability', async (req, res) => {
             return res.status(500).json({ error: 'Ошибка сохранения: ' + error.message });
         }
 
-        console.log('Данные успешно сохранены');
-        res.json({
-            success: true,
-            message: 'Данные сохранены',
-            week_start: weekStart
-        });
-
         const { data: worker, error: workerError } = await supabase
             .from('users')
             .select('id, employer_id')
             .eq('telegram_id', telegram_id)
             .single();
 
-        if (workerError || !worker || !worker.employer_id) {
-            console.log('У работника нет employer_id, пропускаем проверку');
-            return;
-        }
+        if (!workerError && worker && worker.employer_id) {
+            const employerId = worker.employer_id;
+            console.log('работодатель ID', employerId);
 
-        const employerId = worker.employer_id;
-        console.log('работодатель ID', employerId);
+            const { data: workers, error: workersError } = await supabase
+                .from('users')
+                .select('id')
+                .eq('employer_id', employerId)
+                .eq('role', 'worker');
 
-        const { data: workers, error: workersError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('employer_id', employerId)
-            .eq('role', 'worker');
+            if (!workersError && workers && workers.length > 0) {
+                const workerIds = workers.map(w => w.id);
 
-        if (workersError || !workers || workers.length === 0) {
-            console.log('Нет работников у этого работодателя');
-            return;
-        }
+                const { count: respondedCount } = await supabase
+                    .from('weekly_availability')
+                    .select('worker_id', { count: 'exact', head: true })
+                    .eq('week_start', weekStart)
+                    .in('worker_id', workerIds);
 
-        const workerIds = workers.map(w => w.id);
-
-        const { count: respondedCount } = await supabase
-            .from('weekly_availability')
-            .select('worker_id', { count: 'exact', head: true })
-            .eq('week_start', weekStart)
-            .in('worker_id', workerIds);
-
-        if (workers.length === respondedCount) {
-            console.log('Все работники ответили))))) Генерирую расписание');
-            await generationSchedule(employerId, weekStart);
-
+                if (workers.length === respondedCount) {
+                    console.log('Все работники ответили! Генерирую расписание');
+                    await generationSchedule(employerId, weekStart);
+                } else {
+                    console.log(`Ответило ${respondedCount} из ${workers.length} работников`);
+                }
+            } else {
+                console.log('Нет работников у этого работодателя');
+            }
         } else {
-            console.log(`Ответило ${respondedCount} из ${workers.length} работников`);
+            console.log('У работника нет employer_id, пропускаем проверку');
         }
 
+        console.log('Данные успешно сохранены');
+        res.json({
+            success: true,
+            message: 'Данные сохранены',
+            week_start: weekStart
+        });
 
     } catch (err) {
         console.error('Критическая ошибка:', err);
