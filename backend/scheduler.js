@@ -14,7 +14,7 @@ export function cleanPhoneNumber(phone) {
     return phone.replace(/\D/g, '');
 }
 
-export function generationSchedule (employerId, weekStart) {
+export async function generationSchedule (employerId, weekStart) {
     console.log('геренация расписания для ', empoyerId);
 
     const { data: workers } = await supabase
