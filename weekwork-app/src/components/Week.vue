@@ -13,10 +13,12 @@
     <div class="form">
         <textarea class="Descriprion" placeholder="Опишите возможные перестановки в графике" v-model="desc"></textarea>
     </div>
-    <button @click="sendData()">Подвердить</button>
+    <button @click="sendData()">Подтвердить</button>
 </template>
 
 <script>
+const API_URL = 'https://weekwork-production-9d89.up.railway.app';
+
 export default {
     props: {
 
@@ -42,6 +44,7 @@ export default {
         async sendData() {
             if (!this.$parent.user) {
                 alert('Пользователь не авторизован')
+                return
             }
 
             const payload = {
@@ -52,7 +55,7 @@ export default {
             }
 
             try {
-                const response = await fetch('https://weekwork-production-9d89.up.railway.app/api/availability', {
+                const response = await fetch(`${API_URL}/api/availability`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -98,6 +101,8 @@ li {
     width: 30px;
     color: rgb(146, 98, 190);
     transition: transform 200ms;
+    text-align: center;
+    cursor: pointer;
 }
 
 li.active {
@@ -117,18 +122,14 @@ button {
     top: 40vh;
     font-size: 20px;
     border: 1px solid rgb(146, 98, 190);
-    /* -webkit-tap-highlight-color: transparent; */
     transition: transform 200ms;
-    /* touch-action: manipulation; */
+    cursor: pointer;
 }
 
 button:active {
-    /* -webkit-tap-highlight-color: transparent; */
     transform: scaleY(1.1);
     background-color: rgb(100, 25, 170);
 }
-
-
 
 .Descriprion {
     width: 290px;
@@ -143,23 +144,25 @@ button:active {
     font-size: 16px;
 }
 
-@media (max-wight: 375) {
+@media (max-width: 375px) {
     ul {
-    display: flex;
-    justify-content: center;
-    gap: 3px;
-    margin-top: 50px;
+        display: flex;
+        justify-content: center;
+        gap: 3px;
+        margin-top: 50px;
     }
 
     li {
-    list-style: none;
-    background-color: #fff;
-    padding: 8px;
-    border-radius: 10px;
-    border: 2px solid rgb(146, 98, 190);
-    width: 30px;
-    color: rgb(146, 98, 190);
-    transition: transform 200ms;
+        list-style: none;
+        background-color: #fff;
+        padding: 8px;
+        border-radius: 10px;
+        border: 2px solid rgb(146, 98, 190);
+        width: 30px;
+        color: rgb(146, 98, 190);
+        transition: transform 200ms;
+        text-align: center;
+        cursor: pointer;
     }
 }
 </style>

@@ -11,7 +11,14 @@ export const supabase = createClient(
 );
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+    origin: ['https://weekwork-app.vercel.app', 'https://t.me', 'https://web.telegram.org'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 app.use(routes);
 

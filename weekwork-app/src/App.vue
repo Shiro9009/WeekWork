@@ -13,6 +13,8 @@ import Week from './components/Week.vue';
 import Top from './components/Top.vue';
 import EmployerView from './components/EmployerView.vue';
 
+const API_URL = 'https://weekwork-production-9d89.up.railway.app';
+
 export default {
   components: { Week, Top, EmployerView },
   data() {
@@ -65,11 +67,12 @@ export default {
     }
 
     try {
-      const response = await fetch(`/api/employer-data?telegram_id=${this.user.id}`);
+      const response = await fetch(`${API_URL}/api/employer-data?telegram_id=${this.user.id}`);
       if (response.ok) {
         const data = await response.json();
-        if (data.workers) {
+        if (data.workers && data.workers.length > 0) {
           this.userRole = 'employer';
+          console.log('Роль: работодатель');
           return;
         }
       }
@@ -77,16 +80,8 @@ export default {
       console.log('Проверка роли:', e);
     }
 
-    try {
-      const { data } = await supabase
-        .from('users')
-        .select('role')
-        .eq('telegram_id', this.user.id)
-        .single();
-      this.userRole = data?.role || 'worker';
-    } catch (e) {
-      console.log('Ошибка получения роли:', e);
-    }
+    this.userRole = 'worker';
+    console.log('Роль: работник');
   }
 };
 </script>
