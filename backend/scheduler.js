@@ -1,5 +1,5 @@
 import { supabase } from "./index.js";
-import { bot, APP_URL } from "./bot.js";
+import { bot } from "./bot.js";
 
 export function getNextWeekStart(date = new Date()) {
     const d = new Date(date);
@@ -49,18 +49,40 @@ export async function generationSchedule(employerId, weekStart) {
 
     const schedule = generateSimpleSchedule(workers, availabilityMap);
 
-    const { error: insertError } = await supabase
+    const { data: existingOptions, error: checkError } = await supabase
         .from('shift_options')
-        .insert({
-            employer_id: employerId,
-            week_start: weekStart,
-            option_number: 1,
-            schedule: schedule
-        });
+        .select('id')
+        .eq('employer_id', employerId)
+        .eq('week_start', weekStart)
+        .eq('option_number', 1)
+        .single();
 
-    if (insertError) {
-        console.log('Ошибка сохранения расписания', insertError);
-        return;
+    if (!existingOptions) {
+        const { error: insertError } = await supabase
+            .from('shift_options')
+            .insert({
+                employer_id: employerId,
+                week_start: weekStart,
+                option_number: 1,
+                schedule: schedule
+            });
+
+        if (insertError) {
+            console.log('Ошибка сохранения расписания', insertError);
+            return;
+        }
+    } else {
+        const { error: updateError } = await supabase
+            .from('shift_options')
+            .update({ schedule: schedule })
+            .eq('employer_id', employerId)
+            .eq('week_start', weekStart)
+            .eq('option_number', 1);
+
+        if (updateError) {
+            console.log('Ошибка обновления расписания', updateError);
+            return;
+        }
     }
 
     console.log('Расписание сохранено');
@@ -75,14 +97,7 @@ export async function generationSchedule(employerId, weekStart) {
         const employerTelegramId = employer.telegram_id;
         await bot.sendMessage(
             employerTelegramId,
-            'Все работники выбрали дни! Варианты расписания готовы.',
-            {
-                reply_markup: {
-                    inline_keyboard: [
-                        [{ text: 'Посмотреть варианты', web_app: { url: APP_URL } }]
-                    ]
-                }
-            }
+            'Все работники выбрали дни! Варианты расписания готовы. Откройте приложение, чтобы выбрать подходящий вариант.'
         );
         console.log('Уведомление отправлено работодателю');
     } else {
