@@ -108,4 +108,23 @@ router.post('/api/choose-option', async (req, res) => {
     res.json({ success: true, message: 'Расписание выбрано!' });
 });
 
+router.get('/api/user-role', async (req, res) => {
+    const { telegram_id } = req.query;
+    if (!telegram_id) {
+        return res.status(400).json({error: 'Не указан telegram_id'})
+    }
+
+    const {data, error} = await supabase 
+        .from('users')
+        .select('role')
+        .eq('telegram_id', telegram_id)
+        .single();
+
+    if ( error || !data) {
+        return res.status(404).json({ error: 'Пользователь не найден' })
+    }
+
+    res.json({ role: data.role });
+})
+
 export default router;

@@ -20,7 +20,7 @@ export default {
   data() {
     return {
       user: null,
-      userRole: 'worker'
+      userRole: ''
     };
   },
   async mounted() {
@@ -67,17 +67,17 @@ export default {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/employer-data?telegram_id=${this.user.id}`);
+      const response = await fetch(`${API_URL}/api/user-role?telegram_id=${this.user.id}`);
       if (response.ok) {
         const data = await response.json();
-        if (data.workers && data.workers.length > 0) {
+        if (data.role === 'employer') {
           this.userRole = 'employer';
           console.log('Роль: работодатель');
           return;
         }
       }
     } catch (e) {
-      console.log('Проверка роли:', e);
+      console.log('Ошибка получения роли:', e);
     }
 
     this.userRole = 'worker';

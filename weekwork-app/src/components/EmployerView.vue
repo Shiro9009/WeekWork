@@ -37,7 +37,6 @@ export default {
         };
     },
     async mounted() {
-        // 1. Получаем данные пользователя (как в App.vue)
         let userData = null;
 
         if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
@@ -69,7 +68,6 @@ export default {
             return;
         }
 
-        // 2. Загружаем данные работодателя
         try {
             const response = await fetch(`${API_URL}/api/employer-data?telegram_id=${userData.id}`);
             const data = await response.json();
@@ -126,3 +124,8 @@ export default {
     }
 };
 </script>
+
+<style scoped>
+    
+
+</style>
