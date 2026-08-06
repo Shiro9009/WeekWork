@@ -51,10 +51,24 @@ router.get('/api/employer-data', async (req, res) => {
         .eq('week_start', weekStart)
         .order('option_number', { ascending: true });
 
+    const { data: finalSchedule } = await supabase
+        .from('final_schedule')
+        .select('schedule, employer_id')
+        .eq('employer_id', employer.id)
+        .eq('week_start', weekStart)
+        .single()
+    
+    let final = null;
+
+    if (finalSchedule) {
+        final = finalSchedule.schedule;
+    }
+
     res.json({
         workers,
         availability,
         options,
+        final,
         week_start: weekStart
     });
 });

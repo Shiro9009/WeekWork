@@ -3,14 +3,17 @@
         <h1>Управление расписанием</h1>
         <div v-if="loading">Загрузка...</div>
         <div v-else>
-            <div v-if="final === true">
+            <div v-if="final">
                 <h2>Подчинённые</h2>
                 <ul>
                     <li v-for="worker in workers" :key="worker.id">
                         {{ worker.name }}
                     </li>
                 </ul>
-
+                <h2>Финальное</h2>
+                <div v-for="(names, day) in final" :key="day">
+                    <strong>{{ day }}:</strong> {{ names.join(', ') }}
+                </div>
             </div>
             <div v-else>
                 <div class="workers">
@@ -93,6 +96,7 @@ export default {
             this.workers = data.workers || [];
             this.options = data.options || [];
             this.weekStart = data.week_start;
+            this.final = data.final || null;
         } catch (error) {
             console.error('Ошибка загрузки:', error);
         } finally {
