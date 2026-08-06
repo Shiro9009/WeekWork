@@ -3,22 +3,33 @@
         <h1>Управление расписанием</h1>
         <div v-if="loading">Загрузка...</div>
         <div v-else>
-            <div class="workers">
+            <div v-if="final === true">
                 <h2>Подчинённые</h2>
                 <ul>
                     <li v-for="worker in workers" :key="worker.id">
                         {{ worker.name }}
                     </li>
                 </ul>
+
             </div>
-            <div class="options" v-if="options && options.length > 0">
-                <h2>Варианты судьбы плебеев</h2>
-                <div v-for="option in options" :key="option.option_number" class="option-card">
-                    <h3>Вариант {{ option.option_number }}</h3>
-                    <div v-for="(names, day) in option.schedule" :key="day">
-                        <strong>{{ day }}:</strong> {{ names.join(', ') }}
+            <div v-else>
+                <div class="workers">
+                    <h2>Подчинённые</h2>
+                    <ul>
+                        <li v-for="worker in workers" :key="worker.id">
+                            {{ worker.name }}
+                        </li>
+                    </ul>
+                </div>
+                <div class="options" v-if="options && options.length > 0">
+                    <h2>Варианты судьбы плебеев</h2>
+                    <div v-for="option in options" :key="option.option_number" class="option-card">
+                        <h3>Вариант {{ option.option_number }}</h3>
+                        <div v-for="(names, day) in option.schedule" :key="day">
+                            <strong>{{ day }}:</strong> {{ names.join(', ') }}
+                        </div>
+                        <button @click="chooseOption(option.option_number)">Выбрать этот вариант</button>
                     </div>
-                    <button @click="chooseOption(option.option_number)">Выбрать этот вариант</button>
                 </div>
             </div>
         </div>
@@ -33,8 +44,16 @@ export default {
         return {
             workers: [],
             options: [],
-            loading: true
+            loading: true,
+            weekStart: null,
+            final: null,
         };
+    },
+    props: {
+        user: {
+            type: Object,
+            required: true,
+        }
     },
     async mounted() {
         let userData = null;
@@ -73,6 +92,7 @@ export default {
             const data = await response.json();
             this.workers = data.workers || [];
             this.options = data.options || [];
+            this.weekStart = data.week_start;
         } catch (error) {
             console.error('Ошибка загрузки:', error);
         } finally {
@@ -82,14 +102,14 @@ export default {
     methods: {
         async chooseOption(optionNumber) {
             const tg = window.Telegram?.WebApp;
-            const user = tg?.initDataUnsafe?.user;
+            const user = this.user;
 
             if (!user) {
                 alert('Пользователь не авторизован');
                 return;
             }
 
-            const weekStart = this.options[0]?.week_start;
+            const weekStart = this.weekStart;
 
             if (!weekStart) {
                 alert('Не найдена дата недели');
@@ -113,6 +133,8 @@ export default {
 
                 if (result.success) {
                     alert('Расписание выбрано!');
+                    location.reload();
+                    this.final = true;
                 } else {
                     alert('Ошибка: ' + result.error);
                 }
@@ -125,7 +147,4 @@ export default {
 };
 </script>
 
-<style scoped>
-    
-
-</style>
+<style scoped></style>

@@ -47,45 +47,34 @@ export async function generationSchedule(employerId, weekStart) {
         availabilityMap[item.worker_id] = item.days;
     }
 
-    const schedule = generateSimpleSchedule(workers, availabilityMap);
+    for (let optionNumber = 1; optionNumber <= 3; optionNumber++) {
+        const schedule = generateSimpleSchedule(workers, availabilityMap);
 
-    const { data: existingOptions, error: checkError } = await supabase
-        .from('shift_options')
-        .select('id')
-        .eq('employer_id', employerId)
-        .eq('week_start', weekStart)
-        .eq('option_number', 1)
-        .single();
-
-    if (!existingOptions) {
-        const { error: insertError } = await supabase
+        const { data: existing } = await supabase
             .from('shift_options')
-            .insert({
-                employer_id: employerId,
-                week_start: weekStart,
-                option_number: 1,
-                schedule: schedule
-            });
-
-        if (insertError) {
-            console.log('Ошибка сохранения расписания', insertError);
-            return;
-        }
-    } else {
-        const { error: updateError } = await supabase
-            .from('shift_options')
-            .update({ schedule: schedule })
+            .select('id')
             .eq('employer_id', employerId)
             .eq('week_start', weekStart)
-            .eq('option_number', 1);
+            .eq('option_number', optionNumber)
+            .single();
 
-        if (updateError) {
-            console.log('Ошибка обновления расписания', updateError);
-            return;
+        if (!existing) {
+            await supabase.from('shift_options').insert({
+                employer_id: employerId,
+                week_start: weekStart,
+                option_number: optionNumber,
+                schedule: schedule
+            });
+        } else {
+            await supabase.from('shift_options')
+                .update({ schedule: schedule })
+                .eq('employer_id', employerId)
+                .eq('week_start', weekStart)
+                .eq('option_number', optionNumber);
         }
     }
 
-    console.log('Расписание сохранено');
+    console.log('3 варианта расписания сохранены');
 
     const { data: employer, error: employerError } = await supabase
         .from('users')
@@ -117,10 +106,10 @@ function generateSimpleSchedule(workers, availabilityMap) {
 
         if (available.length > 0) {
             const shuffled = [...available].sort(() => Math.random() - 0.5);
-            schedule[day] = shuffled.slice(0, 1).map(w => w.name); // ← было 2, стало 1
+            schedule[day] = shuffled.slice(0, 1).map(w => w.name);
         } else {
             const shuffled = [...workers].sort(() => Math.random() - 0.5);
-            schedule[day] = shuffled.slice(0, 1).map(w => w.name); // ← было 2, стало 1
+            schedule[day] = shuffled.slice(0, 1).map(w => w.name);
         }
     }
 

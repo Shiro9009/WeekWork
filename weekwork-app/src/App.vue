@@ -1,10 +1,17 @@
 <template>
   <div>
-    <EmployerView v-if="userRole === 'employer'" :user="user" />
+    <div v-if="loading" class='loading'>Загрузка...</div>
     <div v-else>
-      <Top :user="user" />
-      <Week />
+      <div v-if="userRole === 'employer'">
+        <Top :user="user" />
+        <EmployerView :user="user" />
+      </div>
+      <div v-else>
+        <Top :user="user" />
+        <Week />
+      </div>
     </div>
+
   </div>
 </template>
 
@@ -20,7 +27,8 @@ export default {
   data() {
     return {
       user: null,
-      userRole: ''
+      userRole: null,
+      loading: true
     };
   },
   async mounted() {
@@ -72,18 +80,21 @@ export default {
         const data = await response.json();
         if (data.role === 'employer') {
           this.userRole = 'employer';
-          console.log('Роль: работодатель');
-          return;
+        } else {
+          this.userRole = 'worker';
         }
       }
     } catch (e) {
       console.log('Ошибка получения роли:', e);
+      this.userRole = 'worker';
     }
 
-    this.userRole = 'worker';
-    console.log('Роль: работник');
+    this.loading = false;  // ← загрузка завершена
   }
-};
+
+
+
+}
 </script>
 
 <style scoped>
