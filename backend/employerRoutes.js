@@ -1,8 +1,10 @@
 import express from "express";
 import { supabase } from "./index.js";
 import { getNextWeekStart } from "./scheduler.js";
+import { bot } from './bot.js';
 
 const router = express.Router();
+
 
 router.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', 'https://weekwork-app.vercel.app');
@@ -119,7 +121,28 @@ router.post('/api/choose-option', async (req, res) => {
         return res.status(500).json({ error: 'Ошибка сохранения' });
     }
 
-    res.json({ success: true, message: 'Расписание выбрано!' });
+    const { data: workers } = await supabase
+        .from('users')
+        .select('id, name, telegrma_id')
+        .eq('employer_id', employer.id)
+        .eq('role', 'worker');
+
+    for (const worker of workers) {
+        const days = []
+        for (const [day, names] of Object.entries(option.schedule)) {
+            if (name.icludes(worker.name)) {
+                days.push(day);
+            }
+        }
+
+        if (days.lenght > 0) {
+            const message = `Смена на следующую неделю ${week_start}: ${days.join(', ')}`;
+            await bot.sendMessage(worker.telegram_id, message);
+        }
+    }
+
+
+    res.json({ success: true, message: 'Расписание выбрано!' });    
 });
 
 router.get('/api/user-role', async (req, res) => {

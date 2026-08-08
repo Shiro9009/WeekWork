@@ -1,7 +1,7 @@
 <template>
     <div class="employer-page">
         <h1>Управление расписанием</h1>
-        <div v-if="loading">Загрузка...</div>
+        <div v-if="loading"><img class="gif_loading" src="/loading-thinking.gif" alt="загрузка"></div>
         <div v-else>
             <div v-if="final">
                 <h2>Подчинённые</h2>

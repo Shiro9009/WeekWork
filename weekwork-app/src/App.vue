@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-if="loading" class='loading'>Загрузка...</div>
+    <div v-if="loading" class='loading'><img class="gif_loading" src="/loading-thinking.gif" alt="загрузка"></div>
     <div v-else>
       <div v-if="userRole === 'employer'">
         <Top :user="user" />
@@ -89,7 +89,7 @@ export default {
       this.userRole = 'worker';
     }
 
-    this.loading = false;  // ← загрузка завершена
+    this.loading = false; 
   }
 
 
@@ -123,4 +123,5 @@ button {
   justify-content: center;
   align-items: center;
 }
+
 </style>

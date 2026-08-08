@@ -8,3 +8,10 @@ body {
     height: 100vh;
     text-align: center;
 }
+
+.gif_loading {
+    width: 200px;
+    height: 200px;
+    align-items: center;
+    margin-top: 10rem;
+}
