@@ -123,7 +123,7 @@ router.post('/api/choose-option', async (req, res) => {
 
     const { data: workers } = await supabase
         .from('users')
-        .select('id, name, telegrma_id')
+        .select('id, name, telegram_id')
         .eq('employer_id', employer.id)
         .eq('role', 'worker');
 
