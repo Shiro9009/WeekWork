@@ -121,6 +121,26 @@ router.post('/api/choose-option', async (req, res) => {
         return res.status(500).json({ error: 'Ошибка сохранения' });
     }
 
+    const { count } = await supabase
+        .from('final_schedule')
+        .select('id', { count: 'exact', head: true })
+        .eq('employer_id', employer.id);
+
+    if (count > 4) {
+        const { data: oldest } = await supabase 
+            .from('final_schedule')
+            .select('id')
+            .eq('employer_id', employer.id)
+            .order('week_start', { ascending: true })
+            .limit(1)
+            .single();
+
+        if (oldest) {
+            await supabase.from('final_schedule').delete().eq('id', oldest.id);
+            console.log(`Старая запись удалена  с ID ${oldest.id}`)
+        }
+    }
+
     const { data: workers } = await supabase
         .from('users')
         .select('id, name, telegram_id')

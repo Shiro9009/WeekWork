@@ -16,6 +16,19 @@ export function cleanPhoneNumber(phone) {
 }
 
 export async function generationSchedule(employerId, weekStart) {
+
+    const { error: deleteError } = await supabase
+        .from('shift_options')
+        .delete()
+        .eq('emloyer_id', employerId);
+
+    if (deleteError) {
+        console.log('Ошибка удаленимя старых вариантов', deleteError);
+        return
+    }
+
+    console.log('Сатрые варианты удалены');
+
     console.log('Генерация расписания для ', employerId);
 
     const { data: workers, error: workersError } = await supabase
