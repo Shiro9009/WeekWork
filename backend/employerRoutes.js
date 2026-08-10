@@ -127,21 +127,23 @@ router.post('/api/choose-option', async (req, res) => {
         .eq('employer_id', employer.id)
         .eq('role', 'worker');
 
-
+    const schedule = option.schedule;
 
     for (const worker of workers) {
-        const { data: workerUp } = await supabase
-            .from('weekly_availability')
-            .select('days')
-            .eq('worker_id', worker.id)
+        if (!worker.telegram_id) continue;
 
-        if (workerUp.days) {
-            const { data: finalSchedule } = await supabase
-                .from('final_schedule')
-                .select('schedule')
-                .eq('employer_id', employer.id)
-            const message = `Смена на следующую неделю ${finalSchedule}: ${days.join(', ')}`;
+        const workerDays = [];
+
+        for (const [day, names] of Object.entries(schedule)) {
+            if (names.includes(worker.name)) {
+                workerDays.push(day);
+            }
+        }
+
+        if (workerDays.length > 0) {
+            const message = `Ваши смены на неделю: ${workerDays.join(', ')}`;
             await bot.sendMessage(worker.telegram_id, message);
+            console.log(`Уведомление отправлено ${worker.name} (${worker.telegram_id})`);
         }
     }
 
