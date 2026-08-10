@@ -59,7 +59,7 @@ router.get('/api/employer-data', async (req, res) => {
         .eq('employer_id', employer.id)
         .eq('week_start', weekStart)
         .single()
-    
+
     let final = null;
 
     if (finalSchedule) {
@@ -127,37 +127,40 @@ router.post('/api/choose-option', async (req, res) => {
         .eq('employer_id', employer.id)
         .eq('role', 'worker');
 
-    for (const worker of workers) {
-        const days = []
-        for (const [day, names] of Object.entries(option.schedule)) {
-            if (name.icludes(worker.name)) {
-                days.push(day);
-            }
-        }
 
-        if (days.lenght > 0) {
-            const message = `Смена на следующую неделю ${week_start}: ${days.join(', ')}`;
+
+    for (const worker of workers) {
+        const { data: workerUp } = await supabase
+            .from('weekly_availability')
+            .select('days')
+            .eq('worker_id', worker.id)
+
+        if (workerUp.days) {
+            const { data: finalSchedule } = await supabase
+                .from('final_schedule')
+                .select('schedule')
+                .eq('employer_id', employer.id)
+            const message = `Смена на следующую неделю ${finalSchedule}: ${days.join(', ')}`;
             await bot.sendMessage(worker.telegram_id, message);
         }
     }
 
-
-    res.json({ success: true, message: 'Расписание выбрано!' });    
+    res.json({ success: true, message: 'Расписание выбрано!' });
 });
 
 router.get('/api/user-role', async (req, res) => {
     const { telegram_id } = req.query;
     if (!telegram_id) {
-        return res.status(400).json({error: 'Не указан telegram_id'})
+        return res.status(400).json({ error: 'Не указан telegram_id' })
     }
 
-    const {data, error} = await supabase 
+    const { data, error } = await supabase
         .from('users')
         .select('role')
         .eq('telegram_id', telegram_id)
         .single();
 
-    if ( error || !data) {
+    if (error || !data) {
         return res.status(404).json({ error: 'Пользователь не найден' })
     }
 
