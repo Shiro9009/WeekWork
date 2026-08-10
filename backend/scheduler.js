@@ -20,7 +20,7 @@ export async function generationSchedule(employerId, weekStart) {
     const { error: deleteError } = await supabase
         .from('shift_options')
         .delete()
-        .eq('emloyer_id', employerId);
+        .eq('employer_id', employerId);
 
     if (deleteError) {
         console.log('Ошибка удаленимя старых вариантов', deleteError);
@@ -35,7 +35,8 @@ export async function generationSchedule(employerId, weekStart) {
         .from('users')
         .select('id, name')
         .eq('employer_id', employerId)
-        .eq('role', 'worker');
+        .eq('role', 'worker')
+        .eq('is_on_leave', false);
 
     if (workersError || !workers || workers.length === 0) {
         console.log('Нет работников');

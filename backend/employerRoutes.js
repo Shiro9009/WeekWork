@@ -145,7 +145,8 @@ router.post('/api/choose-option', async (req, res) => {
         .from('users')
         .select('id, name, telegram_id')
         .eq('employer_id', employer.id)
-        .eq('role', 'worker');
+        .eq('role', 'worker')
+        .eq('is_on_leave', false);
 
     const schedule = option.schedule;
 

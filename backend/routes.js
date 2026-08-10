@@ -88,7 +88,8 @@ router.post('/api/availability', async (req, res) => {
                 .from('users')
                 .select('id')
                 .eq('employer_id', employerId)
-                .eq('role', 'worker');
+                .eq('role', 'worker')
+                .eq('is_on_leave', false);
 
             if (!workersError && workers && workers.length > 0) {
                 const workerIds = workers.map(w => w.id);
