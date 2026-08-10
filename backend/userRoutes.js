@@ -25,4 +25,24 @@ router.post('/api/toggle-leave', async (req, res) => {
     }
 });
 
+router.get('/api/user-status', async (req, res) => {
+    const { telegram_id } = req.query;
+
+    if (!telegram_id) {
+        return res.status(400).json({ error: 'Не указан телеграм айди' });
+    }
+
+    const { data, error } = await supabase
+        .from('users')
+        .select('is_on_leave')
+        .eq('telegram_id', telegram_id)
+        .single();
+
+    if (error || !data) {
+        return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    res.json({ is_on_leave: data.is_on_leave });
+});
+
 export default router;
