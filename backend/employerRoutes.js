@@ -190,4 +190,59 @@ router.get('/api/user-role', async (req, res) => {
     res.json({ role: data.role });
 })
 
+router.post('/api/update-shifts', async (req, res) => {
+    const { telegram_id, workers } = req.body;
+
+    if (!telegram_id || !workers || !Array.isArray(workers)) {
+        return res.status(400).json({ error: 'Не хватает данных' });
+    }
+
+    const { data: employer, error: employerError } = await suabase
+        .from('users')
+        .select('id')
+        .eq('telegram_id', telegram_id)
+        .eq('role', 'employer')
+        .single();
+
+    if (employerError || !employer) {
+        return res.status(400).json({ error: 'Работодатель не найден' });
+    }
+
+    const updates = workers.map(async (worker) => {
+        const { user_id, monthly_shifts } = worker;
+
+        const { data: user } = await supabase
+            .from('users')
+            .select('id'),
+            .eq('id', user_id)
+            .eq('employer_id', employer.id)
+            .single();
+        
+        if(!user) {
+            console.log(`Пользователь ${user_id} не принадлежит этому работодателю`);
+            return null;
+        }
+
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({ monthly_shifts: monthly_shifts})
+            .eq('id', user_id);
+
+        if(updateError) {
+            console.log(`Ошибка обновления для ${user_id}:`, updateError);
+            return null;
+        }
+        return { user_id, monthly_shifts };
+    });
+
+    const results = await Promise.all(updates);
+
+    const failed = results.filter(r => r === null);
+    if(failed.length > 0) {
+        return res.status(500).json({ error: 'Некоторые обновления не удались' });
+    }
+
+    res.json({ success: true, message: 'Количество смен обновлено' });
+});
+
 export default router;

@@ -35,6 +35,7 @@
                     </div>
                 </div>
             </div>
+            <div class="settings_sceduler"></div>
         </div>
     </div>
 </template>

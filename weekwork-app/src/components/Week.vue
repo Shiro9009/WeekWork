@@ -1,13 +1,41 @@
 <template>
     <div class="body">
         <ul>
-            <li @click="selector('Mo')" :class="days.Mo == 1 ? 'active' : ''">Пн</li>
-            <li @click="selector('Tu')" :class="days.Tu == 1 ? 'active' : ''">Вт</li>
-            <li @click="selector('We')" :class="days.We == 1 ? 'active' : ''">Ср</li>
-            <li @click="selector('Th')" :class="days.Th == 1 ? 'active' : ''">Чт</li>
-            <li @click="selector('Fr')" :class="days.Fr == 1 ? 'active' : ''">Пт</li>
-            <li @click="selector('Sa')" :class="days.Sa == 1 ? 'active' : ''">Сб</li>
-            <li @click="selector('Su')" :class="days.Su == 1 ? 'active' : ''">Вс</li>
+            <li @click="selector('Mo')" :class="{
+                'selected': days.Mo === 1,
+                'priority': days.Mo === 2,
+                'unavailable': days.Mo === 3
+            }">Пн</li>
+            <li @click="selector('Tu')" :class="{
+                'selected': days.Tu === 1,
+                'priority': days.Tu === 2,
+                'unavailable': days.Tu === 3
+            }">Вт</li>
+            <li @click="selector('We')" :class="{
+                'selected': days.We === 1,
+                'priority': days.We === 2,
+                'unavailable': days.We === 3
+            }">Ср</li>
+            <li @click="selector('Th')" :class="{
+                'selected': days.Th === 1,
+                'priority': days.Th === 2,
+                'unavailable': days.Th === 3
+            }">Чт</li>
+            <li @click="selector('Fr')" :class="{
+                'selected': days.Fr === 1,
+                'priority': days.Fr === 2,
+                'unavailable': days.Fr === 3
+            }">Пт</li>
+            <li @click="selector('Sa')" :class="{
+                'selected': days.Sa === 1,
+                'priority': days.Sa === 2,
+                'unavailable': days.Sa === 3
+            }">Сб</li>
+            <li @click="selector('Su')" :class="{
+                'selected': days.Su === 1,
+                'priority': days.Su === 2,
+                'unavailable': days.Su === 3
+            }">Вс</li>
         </ul>
     </div>
     <div class="form">
@@ -39,7 +67,7 @@ export default {
     },
     methods: {
         selector(day) {
-            this.days[day] = this.days[day] === 1 ? 0 : 1
+            this.days[day] = (this.days[day] + 1) % 4;
         },
         async sendData() {
             if (!this.$parent.user) {
@@ -105,10 +133,25 @@ li {
     cursor: pointer;
 }
 
-li.active {
-    transform: scale(1.1);
-    background-color: rgb(100, 25, 170);
-    color: #fff;
+li.selected {
+    background-color: #724caf;
+    color: white;
+    border-color: #4e2196;
+    transform: scale(1.05);
+}
+
+li.priority {
+    background-color: #ff00f2;
+    color: white;
+    border-color: #b600ad;
+    transform: scale(1.15);
+    box-shadow: 0 0 12px rgba(255, 152, 0, 0.5);
+}
+
+li.unavailable {
+    background-color: #99003b;
+    color: white;
+    border-color: #75002d;
 }
 
 button {

@@ -1,17 +1,19 @@
 <template>
     <div class="profile">
-        <h2>Профиль раба</h2>
+        <h2>Профиль</h2>
         <p>{{ user.first_name }}</p>
         <p>@{{ user.username }}</p>
-        <div class="leave-toggle">
+        <p>Роль: {{ role === 'employer' ? 'Работодатель' : 'Работник' }}</p>
+
+        <div v-if="role === 'worker'" class="leave-toggle">
             <label>
                 <input type="checkbox" v-model="isOnLeave" @change="toggleLeave">
-                {{ isOnLeave ? 'В отупске' : 'пиздуй работать'}}
+                {{ isOnLeave ? 'В отпуске' : 'Активен' }}
             </label>
         </div>
+
         <button @click="goBack">Назад</button>
     </div>
-
 </template>
 
 <script>
@@ -25,7 +27,7 @@ export default {
         }
     },
     computed: {
-        user() { 
+        user() {
             if (this.$route.query.user) {
                 try {
                     return JSON.parse(this.$route.query.user);
@@ -34,6 +36,9 @@ export default {
                 }
             }
             return this.$parent.user || null;
+        },
+        role() {
+            return this.$route.query.role || null;
         }
     },
     async mounted() {
@@ -42,14 +47,17 @@ export default {
             this.$router.push('/');
             return;
         }
-
-        try {
-            const response = await fetch(`${API_URL}/api/user-status?telegram_id=${this.user.id}`);
-            const data = await response.json();
-            this.isOnLeave = data.is_on_leave || false;
-        } catch (error) {
-            console.log('Ошибка загрузки статуса:', error);
-        } finally {
+        if (this.user.role === 'worker') {
+            try {
+                const response = await fetch(`${API_URL}/api/user-status?telegram_id=${this.user.id}`);
+                const data = await response.json();
+                this.isOnLeave = data.is_on_leave || false;
+            } catch (error) {
+                console.log('Ошибка загрузки статуса:', error);
+            } finally {
+                this.loading = false;
+            }
+        } else {
             this.loading = false;
         }
     },
@@ -58,6 +66,11 @@ export default {
             this.$router.go(-1);
         },
         async toggleLeave() {
+            if (this.user.role !== 'worker') {
+                alert('Только работники могут менять статус отпуска');
+                return;
+            }
+
             try {
                 const response = await fetch(`${API_URL}/api/toggle-leave`, {
                     method: 'POST',
@@ -79,7 +92,7 @@ export default {
             } catch (error) {
                 console.log('Ошибка: ', error);
                 this.isOnLeave = !this.isOnLeave;
-                alert('Не удалось обновить статус, придётся вам работать, извините');
+                alert('Не удалось обновить статус');
             }
         }
     }
