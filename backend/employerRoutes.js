@@ -213,7 +213,7 @@ router.post('/api/update-shifts', async (req, res) => {
 
         const { data: user } = await supabase
             .from('users')
-            .select('id'),
+            .select('id')
             .eq('id', user_id)
             .eq('employer_id', employer.id)
             .single();
