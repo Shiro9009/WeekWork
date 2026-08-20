@@ -35,7 +35,14 @@
                     </div>
                 </div>
             </div>
-            <div class="settings_sceduler"></div>
+            <div class="settings_sceduler">
+                <h3>Количество смен</h3>
+                <div v-for="worker in workers" :key="worker.id">
+                    <p>{{ worker.name }}</p>
+                    <input type="number" v-model.number="worker.mothly_shifts" min="0"/>
+                </div>
+                <button @click="saveShifts">Сохранить</button>
+            </div>
         </div>
     </div>
 </template>
@@ -147,7 +154,31 @@ export default {
                 console.error('Ошибка отправки:', error);
                 alert('Не удалось отправить данные');
             }
-        }
+        },
+        async saveShifts() {
+            try {
+                const response = await fetch(`${API_URL}/api/update-shifts`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        telegram_id: this.user.id,
+                        workers: this.workers.map(w => ({
+                            user_id: w.id,
+                            monthly_shifts: w.monthly_shifts || 0
+                        }))
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('Смены сохаренын');
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        },
     }
 };
 </script>

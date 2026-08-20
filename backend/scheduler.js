@@ -23,17 +23,16 @@ export async function generationSchedule(employerId, weekStart) {
         .eq('employer_id', employerId);
 
     if (deleteError) {
-        console.log('Ошибка удаленимя старых вариантов', deleteError);
-        return
+        console.log('Ошибка удаления старых вариантов', deleteError);
+        return;
     }
 
-    console.log('Сатрые варианты удалены');
-
+    console.log('Старые варианты удалены');
     console.log('Генерация расписания для ', employerId);
 
     const { data: workers, error: workersError } = await supabase
         .from('users')
-        .select('id, name')
+        .select('id, name, monthly_shifts')
         .eq('employer_id', employerId)
         .eq('role', 'worker')
         .eq('is_on_leave', false);
@@ -111,20 +110,53 @@ export async function generationSchedule(employerId, weekStart) {
 function generateSimpleSchedule(workers, availabilityMap) {
     const daysOfWeek = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
     const schedule = {};
+    
+    const shiftCount = {};
+    workers.forEach(w => shiftCount[w.id] = 0);
 
     for (const day of daysOfWeek) {
-        const available = workers.filter(w => {
-            const days = availabilityMap[w.id];
-            return days && days[day] === 1;
+        const priority = workers.filter(w => {
+            const status = availabilityMap[w.id]?.[day] || 0;
+            return status === 2;
         });
 
-        if (available.length > 0) {
-            const shuffled = [...available].sort(() => Math.random() - 0.5);
-            schedule[day] = shuffled.slice(0, 1).map(w => w.name);
-        } else {
-            const shuffled = [...workers].sort(() => Math.random() - 0.5);
-            schedule[day] = shuffled.slice(0, 1).map(w => w.name);
+        const selected = workers.filter(w => {
+            const status = availabilityMap[w.id]?.[day] || 0;
+            return status === 1;
+        });
+
+        const unavailable = workers.filter(w => {
+            const status = availabilityMap[w.id]?.[day] || 0;
+            return status === 3;
+        });
+
+        let available = priority.filter(w => 
+            shiftCount[w.id] < (w.monthly_shifts || 999)
+        );
+        let shuffled = [...available].sort(() => Math.random() - 0.5);
+        let assigned = shuffled.slice(0, 1);
+
+        if (assigned.length < 1) {
+            const availableSelected = selected.filter(w => 
+                shiftCount[w.id] < (w.monthly_shifts || 999)
+            );
+            const shuffledSelected = [...availableSelected].sort(() => Math.random() - 0.5);
+            assigned = shuffledSelected.slice(0, 1);
         }
+
+        if (assigned.length === 0) {
+            const availableAll = workers.filter(w => 
+                !unavailable.includes(w) && shiftCount[w.id] < (w.monthly_shifts || 999)
+            );
+            const shuffledAll = [...availableAll].sort(() => Math.random() - 0.5);
+            assigned = shuffledAll.slice(0, 1);
+        }
+
+        schedule[day] = assigned.map(w => w.name);
+
+        assigned.forEach(w => {
+            shiftCount[w.id] = (shiftCount[w.id] || 0) + 1;
+        });
     }
 
     return schedule;
