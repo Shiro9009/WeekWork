@@ -197,7 +197,7 @@ router.post('/api/update-shifts', async (req, res) => {
         return res.status(400).json({ error: 'Не хватает данных' });
     }
 
-    const { data: employer, error: employerError } = await suabase
+    const { data: employer, error: employerError } = await supabase
         .from('users')
         .select('id')
         .eq('telegram_id', telegram_id)
@@ -266,7 +266,7 @@ router.post('/api/update-schedule', async (req, res) => {
     const { error: updateError } = await supabase
         .from('final_schedule')
         .update({ schedule: schedule })
-        .eq('employer_id', telegram_id)
+        .eq('employer_id', employer.id)
         .eq('week_start', week_start);
 
     if (updateError) {
