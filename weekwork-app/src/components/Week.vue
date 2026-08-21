@@ -67,7 +67,19 @@ export default {
     },
     methods: {
         selector(day) {
-            this.days[day] = (this.days[day] + 1) % 4;
+            const current = this.days[day];
+            const next = (current + 1) % 4;
+
+            if (next === 2) {
+                const priorityCount = Object.values(this.days).filter(v => v === 2).length;
+
+                if (priorityCount >= 4) {
+                    alert('Нельзя поставить больше 4 приоритетных дней. Выберите другие дни как обычные.');
+                    return;
+                }
+            }
+
+            this.days[day] = next;
         },
         async sendData() {
             if (!this.$parent.user) {

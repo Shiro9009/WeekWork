@@ -245,4 +245,36 @@ router.post('/api/update-shifts', async (req, res) => {
     res.json({ success: true, message: 'Количество смен обновлено' });
 });
 
+router.post('/api/update-schedule', async (req, res) => {
+    const {telegram_id, week_start, schedule} = req.body;
+
+    if (!telegram_id || !week_start || !schedule) {
+        res.status(400).json({ error: 'Не хватает данных' });
+    }
+
+    const { data: employer, error: employerError} = await supabase
+        .from('users')
+        .select('id')
+        .eq('telegram_id', telegram_id)
+        .eq('role', 'employer')
+        .single();
+
+    if ( employerError || !employer ) {
+        return res.status(500).json({ error: 'Работодатель не найден' });
+    }
+
+    const { error: updateError } = await supabase
+        .from('final_schedule')
+        .update({ schedule: schedule })
+        .eq('employer_id', telegram_id)
+        .eq('week_start', week_start);
+
+    if (updateError) {
+        console.error('Ошибка обновления расписания:', updateError);
+        return res.status(500).json({ error: 'Ошибка сохранения' })
+    }
+
+    res.json({ success: true, message: 'Расписание обновлено' });
+})
+
 export default router;

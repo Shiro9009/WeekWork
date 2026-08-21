@@ -12,8 +12,15 @@
                 </ul>
                 <h2>Финальное</h2>
                 <div v-for="(names, day) in final" :key="day">
-                    <strong>{{ day }}:</strong> {{ names.join(', ') }}
+                    <strong>{{ day }}:</strong>
+                    <p v-if="!showSelect[day]" @click="openSelect(day)">{{ names.join(', ') }}</p>
+                    <select v-else @change="replaceWorker(day, $event)">
+                        <option v-for="worker in workers" :key="worker.id" :value="worker.name">
+                            {{ worker.name }}
+                        </option>
+                    </select>
                 </div>
+
             </div>
             <div v-else>
                 <div class="workers">
@@ -39,7 +46,8 @@
                 <h3>Количество смен</h3>
                 <div v-for="worker in workers" :key="worker.id">
                     <p>{{ worker.name }}</p>
-                    <input type="number" v-model.number="worker.mothly_shifts" min="0"/>
+                    <input v-if="countShifts === false" type="number" v-model.number="worker.mothly_shifts" min="0" />
+                    <p v-else>{{ worker.monthly_shifts }}</p>
                 </div>
                 <button @click="saveShifts">Сохранить</button>
             </div>
@@ -58,6 +66,8 @@ export default {
             loading: true,
             weekStart: null,
             final: null,
+            showSelect: {},
+            countShifts: false,
         };
     },
     props: {
@@ -109,6 +119,10 @@ export default {
             console.error('Ошибка загрузки:', error);
         } finally {
             this.loading = false;
+        }
+
+        for (const day in this.final) {
+            this.showSelect[day] = false;
         }
     },
     methods: {
@@ -172,6 +186,7 @@ export default {
                 const data = await response.json();
                 if (data.success) {
                     alert('Смены сохаренын');
+                    this.countShifts = true;
                 } else {
                     alert('Ошибка: ' + data.error);
                 }
@@ -179,6 +194,14 @@ export default {
                 console.error('Ошибка:', error);
             }
         },
+        openSelect(day) {
+            this.showSelect[day] = true;
+        },
+        replaceWorker(day, event) {
+            const newName = event.target.value;
+            this.final[day] = [newName];
+            this.showSelect[day] = false;
+        }
     }
 };
 </script>
