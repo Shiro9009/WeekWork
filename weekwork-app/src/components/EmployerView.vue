@@ -20,7 +20,7 @@
                         </option>
                     </select>
                 </div>
-
+                <button v-if="hasChenges" @click="saveSchedule" class="save-btn">Сохранить</button>
             </div>
             <div v-else>
                 <div class="workers">
@@ -32,7 +32,7 @@
                     </ul>
                 </div>
                 <div class="options" v-if="options && options.length > 0">
-                    <h2>Варианты судьбы плебеев</h2>
+                    <h2>Варианты расписания</h2>
                     <div v-for="option in options" :key="option.option_number" class="option-card">
                         <h3>Вариант {{ option.option_number }}</h3>
                         <div v-for="(names, day) in option.schedule" :key="day">
@@ -45,11 +45,17 @@
             <div class="settings_sceduler">
                 <h3>Количество смен</h3>
                 <div v-for="worker in workers" :key="worker.id">
-                    <p>{{ worker.name }}</p>
-                    <input v-if="countShifts === false" type="number" v-model.number="worker.mothly_shifts" min="0" />
-                    <p v-else>{{ worker.monthly_shifts }}</p>
+                    <p v-if="!isEditing">{{ worker.name }} - осталось: {{ worker.monthly_shifts || 0 }} смен</p>
+                    <div v-else>
+                        <p>{{ worker.name }}</p>
+                        <input type="number" v-model.number="worker.monthly_shifts" min="0" />
+                    </div>
                 </div>
-                <button @click="saveShifts">Сохранить</button>
+                <button v-if="!isEditing" @click="isEditing = true" class="edit-btn">Изменить смены</button>
+                <div v-else>
+                    <button @click="saveShifts" class="save-btn">Сохранить</button>
+                    <button @click="isEditing = false" class="cancel-btn">Отмена</button>
+                </div>
             </div>
         </div>
     </div>
@@ -67,7 +73,8 @@ export default {
             weekStart: null,
             final: null,
             showSelect: {},
-            countShifts: false,
+            hasChenges: false,
+            isEditing: false,
         };
     },
     props: {
@@ -185,8 +192,8 @@ export default {
 
                 const data = await response.json();
                 if (data.success) {
-                    alert('Смены сохаренын');
-                    this.countShifts = true;
+                    alert('Смены сохранены');
+                    this.isEditing = false;
                 } else {
                     alert('Ошибка: ' + data.error);
                 }
@@ -201,9 +208,83 @@ export default {
             const newName = event.target.value;
             this.final[day] = [newName];
             this.showSelect[day] = false;
+            this.hasChenges = true;
+        },
+        async saveSchedule() {
+            const payload = {
+                telegram_id: this.user.id,
+                week_start: this.weekStart,
+                schedule: this.final,
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/api/update-schedule`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Расписание сохранено');
+                    this.hasChenges = false;
+                } else {
+                    alert('Ошибка: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Ошибка сохранения:', error);
+                alert('Не удалось сохранить');
+            }
         }
     }
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+.save-btn {
+    background: #310597;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 15px;
+}
+
+.save-btn:hover {
+    background: #455aa0;
+}
+
+.edit-btn {
+    background: #0a0f4e;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 15px;
+}
+
+.edit-btn:hover {
+    background: #2d059c;
+}
+
+.cancel-btn {
+    background: #888;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 15px;
+    margin-left: 10px;
+}
+
+.cancel-btn:hover {
+    background: #666;
+}
+</style>

@@ -82,7 +82,7 @@ router.post('/api/choose-option', async (req, res) => {
         return res.status(400).json({ error: 'Не хватает данных' });
     }
 
-    const { data: employer } = await supabase
+    const { data: employer, error: employerError } = await supabase
         .from('users')
         .select('id')
         .eq('telegram_id', telegram_id)
@@ -121,36 +121,40 @@ router.post('/api/choose-option', async (req, res) => {
         return res.status(500).json({ error: 'Ошибка сохранения' });
     }
 
-    const { count } = await supabase
-        .from('final_schedule')
-        .select('id', { count: 'exact', head: true })
-        .eq('employer_id', employer.id);
+    const schedule = option.schedule;
+    const { data: workers } = await supabase
+        .from('users')
+        .select('id, name, monthly_shifts')
+        .eq('employer_id', employer.id)
+        .eq('role', 'worker')
+        .eq('is_on_leave', false);
 
-    if (count > 4) {
-        const { data: oldest } = await supabase 
-            .from('final_schedule')
-            .select('id')
-            .eq('employer_id', employer.id)
-            .order('week_start', { ascending: true })
-            .limit(1)
-            .single();
+    for (const worker of workers) {
+        let count = 0;
+        for (const [day, names] of Object.entries(schedule)) {
+            if (names.includes(worker.name)) {
+                count++;
+            }
+        }
 
-        if (oldest) {
-            await supabase.from('final_schedule').delete().eq('id', oldest.id);
-            console.log(`Старая запись удалена  с ID ${oldest.id}`)
+        if (count > 0) {
+            const newShifts = Math.max(0, (worker.monthly_shifts || 0) - count);
+            await supabase
+                .from('users')
+                .update({ monthly_shifts: newShifts })
+                .eq('id', worker.id);
+            console.log(`У работника ${worker.name} осталось ${newShifts} смен`);
         }
     }
 
-    const { data: workers } = await supabase
+    const { data: workersForNotifications } = await supabase
         .from('users')
         .select('id, name, telegram_id')
         .eq('employer_id', employer.id)
         .eq('role', 'worker')
         .eq('is_on_leave', false);
 
-    const schedule = option.schedule;
-
-    for (const worker of workers) {
+    for (const worker of workersForNotifications) {
         if (!worker.telegram_id) continue;
 
         const workerDays = [];
@@ -170,25 +174,6 @@ router.post('/api/choose-option', async (req, res) => {
 
     res.json({ success: true, message: 'Расписание выбрано!' });
 });
-
-router.get('/api/user-role', async (req, res) => {
-    const { telegram_id } = req.query;
-    if (!telegram_id) {
-        return res.status(400).json({ error: 'Не указан telegram_id' })
-    }
-
-    const { data, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('telegram_id', telegram_id)
-        .single();
-
-    if (error || !data) {
-        return res.status(404).json({ error: 'Пользователь не найден' })
-    }
-
-    res.json({ role: data.role });
-})
 
 router.post('/api/update-shifts', async (req, res) => {
     const { telegram_id, workers } = req.body;
@@ -246,21 +231,54 @@ router.post('/api/update-shifts', async (req, res) => {
 });
 
 router.post('/api/update-schedule', async (req, res) => {
-    const {telegram_id, week_start, schedule} = req.body;
+    const { telegram_id, week_start, schedule } = req.body;
 
     if (!telegram_id || !week_start || !schedule) {
-        res.status(400).json({ error: 'Не хватает данных' });
+        return res.status(400).json({ error: 'Не хватает данных' });
     }
 
-    const { data: employer, error: employerError} = await supabase
+    const { data: employer, error: employerError } = await supabase
         .from('users')
         .select('id')
         .eq('telegram_id', telegram_id)
         .eq('role', 'employer')
         .single();
 
-    if ( employerError || !employer ) {
-        return res.status(500).json({ error: 'Работодатель не найден' });
+    if (employerError || !employer) {
+        return res.status(404).json({ error: 'Работодатель не найден' });
+    }
+
+    const { data: oldFinal } = await supabase
+        .from('final_schedule')
+        .select('schedule')
+        .eq('employer_id', employer.id)
+        .eq('week_start', week_start)
+        .single();
+
+    const oldSchedule = oldFinal?.schedule || {};
+
+    const { data: workers } = await supabase
+        .from('users')
+        .select('id, name, monthly_shifts')
+        .eq('employer_id', employer.id)
+        .eq('role', 'worker')
+        .eq('is_on_leave', false);
+
+    for (const worker of workers) {
+        let oldCount = 0;
+        for (const [day, names] of Object.entries(oldSchedule)) {
+            if (names.includes(worker.name)) {
+                oldCount++;
+            }
+        }
+
+        if (oldCount > 0) {
+            const restoredShifts = (worker.monthly_shifts || 0) + oldCount;
+            await supabase
+                .from('users')
+                .update({ monthly_shifts: restoredShifts })
+                .eq('id', worker.id);
+        }
     }
 
     const { error: updateError } = await supabase
@@ -271,10 +289,27 @@ router.post('/api/update-schedule', async (req, res) => {
 
     if (updateError) {
         console.error('Ошибка обновления расписания:', updateError);
-        return res.status(500).json({ error: 'Ошибка сохранения' })
+        return res.status(500).json({ error: 'Ошибка сохранения' });
+    }
+
+    for (const worker of workers) {
+        let newCount = 0;
+        for (const [day, names] of Object.entries(schedule)) {
+            if (names.includes(worker.name)) {
+                newCount++;
+            }
+        }
+
+        if (newCount > 0) {
+            const newShifts = Math.max(0, (worker.monthly_shifts || 0) - newCount);
+            await supabase
+                .from('users')
+                .update({ monthly_shifts: newShifts })
+                .eq('id', worker.id);
+        }
     }
 
     res.json({ success: true, message: 'Расписание обновлено' });
-})
+});
 
 export default router;
