@@ -5,17 +5,6 @@ import { bot } from './bot.js';
 
 const router = express.Router();
 
-
-router.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'https://weekwork-app.vercel.app');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
-    }
-    next();
-});
-
 router.get('/api/employer-data', async (req, res) => {
     const { telegram_id } = req.query;
 
@@ -58,7 +47,7 @@ router.get('/api/employer-data', async (req, res) => {
         .select('schedule, employer_id')
         .eq('employer_id', employer.id)
         .eq('week_start', weekStart)
-        .single()
+        .single();
 
     let final = null;
 
@@ -202,18 +191,18 @@ router.post('/api/update-shifts', async (req, res) => {
             .eq('id', user_id)
             .eq('employer_id', employer.id)
             .single();
-        
-        if(!user) {
+
+        if (!user) {
             console.log(`Пользователь ${user_id} не принадлежит этому работодателю`);
             return null;
         }
 
         const { error: updateError } = await supabase
             .from('users')
-            .update({ monthly_shifts: monthly_shifts})
+            .update({ monthly_shifts: monthly_shifts })
             .eq('id', user_id);
 
-        if(updateError) {
+        if (updateError) {
             console.log(`Ошибка обновления для ${user_id}:`, updateError);
             return null;
         }
@@ -223,7 +212,7 @@ router.post('/api/update-shifts', async (req, res) => {
     const results = await Promise.all(updates);
 
     const failed = results.filter(r => r === null);
-    if(failed.length > 0) {
+    if (failed.length > 0) {
         return res.status(500).json({ error: 'Некоторые обновления не удались' });
     }
 
@@ -310,6 +299,26 @@ router.post('/api/update-schedule', async (req, res) => {
     }
 
     res.json({ success: true, message: 'Расписание обновлено' });
+});
+
+router.get('/api/user-role', async (req, res) => {
+    const { telegram_id } = req.query;
+
+    if (!telegram_id) {
+        return res.status(400).json({ error: 'Не указан telegram_id' });
+    }
+
+    const { data, error } = await supabase
+        .from('users')
+        .select('role')
+        .eq('telegram_id', telegram_id)
+        .single();
+
+    if (error || !data) {
+        return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    res.json({ role: data.role });
 });
 
 export default router;
