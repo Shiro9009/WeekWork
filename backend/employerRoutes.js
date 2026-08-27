@@ -246,18 +246,29 @@ router.post('/api/update-schedule', async (req, res) => {
 });
 
 router.get('/api/user-role', async (req, res) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+
     const { telegram_id } = req.query;
+
     if (!telegram_id) {
         return res.status(400).json({ error: 'Не указан telegram_id' });
     }
+
     const { data, error } = await supabase
         .from('users')
         .select('role')
         .eq('telegram_id', telegram_id)
         .single();
+
     if (error || !data) {
         return res.status(404).json({ error: 'Пользователь не найден' });
     }
+
     res.json({ role: data.role });
 });
 
