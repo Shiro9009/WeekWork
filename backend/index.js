@@ -19,10 +19,9 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Methods', '*');
     res.header('Access-Control-Allow-Headers', '*');
     if (req.method === 'OPTIONS') {
-        res.sendStatus(200);
-    } else {
-        next();
+        return res.sendStatus(200);
     }
+    next();
 });
 
 app.use(cors({
@@ -36,10 +35,6 @@ app.use(express.json());
 app.use(routes);
 app.use(employerRoutes);
 app.use(userRoutes);
-
-app.get('/*', (req, res) => {
-    res.json({ status: 'ok', path: req.path });
-});
 
 const PORT = 3000;
 app.listen(PORT, '0.0.0.0', () => {
