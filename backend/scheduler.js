@@ -16,6 +16,6 @@ export function cleanPhoneNumber(phone) {
 }
 
 export async function generationSchedule(employerId, weekStart) {
-    console.log('Генерация расписания вызвана');
+    console.log('Генерация расписания вызвана для:', employerId, weekStart);
     return;
 }
