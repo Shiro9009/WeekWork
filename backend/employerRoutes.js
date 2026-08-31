@@ -242,6 +242,32 @@ router.post('/api/update-schedule', async (req, res) => {
                 .eq('id', worker.id);
         }
     }
+
+    const { data: workerForNotifications } = await supabase
+        .from('users')
+        .select('id, name, telegram_id')
+        .eq('telegram_id', employer.id)
+        .eq('role', 'worker')
+        .eq('is_on_leave', false);
+
+    for (const worker of workerForNotifications) {
+        if (!worker.telegram_id) continue;
+
+        const newDays = [];
+        for (const [day, names] of Object.entries(schedule)) {
+            if (names.includes(worker.name)) {
+                newDays.push(day);
+            }
+        }
+
+        if (newDays.length > 0) {
+            const message = `Ваше расписание обновлено. ${newDays.join(', ')}`;
+
+            await bot.sendMessage(worker.telegram_id, message);
+            console.log(`Уведомление отправлено ${worker.name} (${worker.telegram_id})`);
+        }
+    }
+
     res.json({ success: true, message: 'Расписание обновлено' });
 });
 
@@ -253,7 +279,7 @@ router.get('/api/user-role', async (req, res) => {
         return res.sendStatus(200);
     }
 
-    const { telegram_id } = req.query;
+    const { telegram_id } = req.query;  
 
     if (!telegram_id) {
         return res.status(400).json({ error: 'Не указан telegram_id' });
