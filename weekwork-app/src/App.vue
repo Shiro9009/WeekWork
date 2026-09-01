@@ -115,29 +115,4 @@ export default {
   width: 50px;
 }
 
-p {
-  font-size: 20px;
-}
-
-button {
-  width: 300px;
-  padding: 10px;
-  outline: none;
-  border: none;
-  margin-top: 20px;
-  border-radius: 10px;
-  background-color: #530b74;
-  border: 2px solid #340749;
-  font-size: 25px;
-  color: #f3ecef;
-}
-
-.count {
-  border: 2px solid #140c81;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
 </style>

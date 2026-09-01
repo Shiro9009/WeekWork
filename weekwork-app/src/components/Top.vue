@@ -1,8 +1,10 @@
 <template>
     <div class="header">
-        <div class="icon"></div>
-        <div class="line"></div>
-        <p v-if="user && user.first_name" class="first_name" @click="goToProfile">{{ user.first_name }}</p>
+        <div class="name-ava">
+            <div class="icon"></div>
+            <p v-if="user && user.first_name" class="first_name" @click="goToProfile">{{ user.first_name }}</p>
+        </div>
+        <h2 class="title">WeekWork</h2>
     </div>
 </template>
 
@@ -29,14 +31,13 @@ export default {
 
 <style scoped>
 .header {
-    background-color: #8713bd;
+    background-color: #FFFFFF;
     height: 50px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 9px 11px;
-    border-bottom-left-radius: 20px;
-    border-bottom-right-radius: 20px;
+    border-bottom: 1px solid #d8d8d8;
 }
 
 .icon {
@@ -44,17 +45,24 @@ export default {
     border-radius: 50px;
     width: 50px;
     height: 50px;
+    border: 1px solid #000;
 }
 
-.line {
-    border: 1px solid #af3afd;
-    width: 130px;
-    transform: rotateZ(30deg);
+.name-ava {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.title {
+    color: #7C6BC4;
+    font-size: 22px;
+    font-weight: 600;
 }
 
 .first_name {
-    color: #fff;
-    font-size: 23px;
+    color: #000;
+    font-size: 20px;
     font-weight: 600;
 }
 </style>
