@@ -298,21 +298,6 @@ router.get('/api/user-role', async (req, res) => {
     res.json({ role: data.role });
 });
 
-router.get('/api/employer-info', async (req, res) => {
-    const { employer_id } = req.query;
-    if (!employer_id) {
-        return res.status(400).json({ error: 'Не указан employer_id' });
-    }
-    const { data, error } = await supabase
-        .from('users')
-        .select('username')
-        .eq('telegram_id', employer_id)
-        .single();
-    if (error || !data) {
-        return res.status(404).json({ error: 'Работодатель не найден' });
-    }
-    res.json({ username: data.username });
-});
 
 router.get('/api/employer-info', async (req, res) => {
     const { telegram_id } = req.query;
