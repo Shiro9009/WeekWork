@@ -53,9 +53,9 @@ router.get('/api/user-shifts', async (req, res) => {
 });
 
 router.get('/api/user-avatar', async (req, res) => {
-    const {telegram_id} = req.quary;
+    const {telegram_id} = req.query;
 
-    if(!teleram_id) {
+    if (!teleram_id) {
         return res.status(400).json({ error: 'Не указан telegram_id' });
     }
 
