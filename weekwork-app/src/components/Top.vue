@@ -10,10 +10,12 @@
 </template>
 
 <script>
+const API_URL = 'https://weekwork-production-ea3e.up.railway.app';
+
 export default {
     data() {
         return {
-
+            avatarUrl: null,
         }
     },
     props: {
@@ -22,9 +24,31 @@ export default {
             required: true,
         }
     },
+    watch: {
+        user: {
+            immediate: true,
+            handler(newUser) {
+                if (newUser && newUser.id) {
+                    this.fetchAvatar();
+                }
+            }
+        }
+    },
     methods: {
         goToProfile() {
             this.$emit('open-profile');
+        },
+        async fetchAvatar() {
+            if (!this.user || !this.user.id) return;
+            try {
+                const response = await fetch(`${API_URL}/api/user-avatar?telegram_id=${this.user.id}`);
+                const data = await response.json();
+                if (data.success && data.avatarUrl) {
+                    this.avatarUrl = data.avatarUrl;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки аватарки:', error);
+            }
         },
     }
 }
