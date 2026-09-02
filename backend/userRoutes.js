@@ -62,7 +62,8 @@ router.get('/api/user-avatar', async (req, res) => {
     try {
         console.log('Запрос аватара для:', telegram_id);
 
-        const photos = await bot.telegram.getUserProfilePhotos(telegram_id, {
+        // Используем bot.getUserProfilePhotos (без .telegram)
+        const photos = await bot.getUserProfilePhotos(telegram_id, {
             limit: 1
         });
 
@@ -76,7 +77,8 @@ router.get('/api/user-avatar', async (req, res) => {
         const fileId = photos.photos[0][photos.photos[0].length - 1].file_id;
         console.log('File ID:', fileId);
 
-        const fileLink = await bot.telegram.getFileLink(fileId);
+        // Используем bot.getFileLink (без .telegram)
+        const fileLink = await bot.getFileLink(fileId);
         console.log('Ссылка на файл:', fileLink);
 
         res.json({ success: true, avatarUrl: fileLink });
