@@ -314,4 +314,38 @@ router.get('/api/employer-info', async (req, res) => {
     res.json({ username: data.username });
 });
 
+router.get('/api/employer-info', async (req, res) => {
+    const { telegram_id } = req.query;
+    if (!telegram_id) {
+        return res.status(400).json({ error: 'Не указан telegram_id' });
+    }
+
+    try {
+        const { data: worker, error: workerError } = await supabase
+            .from('users')
+            .select('employer_id')
+            .eq('telegram_id', telegram_id)
+            .single();
+
+        if (workerError || !worker || !worker.employer_id) {
+            return res.status(404).json({ error: 'Работодатель не найден' });
+        }
+
+        const { data: employer, error: employerError } = await supabase
+            .from('users')
+            .select('username')
+            .eq('id', worker.employer_id)
+            .single();
+
+        if (employerError || !employer) {
+            return res.status(404).json({ error: 'Работодатель не найден' });
+        }
+
+        res.json({ username: employer.username });
+    } catch (error) {
+        console.error('Ошибка в /api/employer-info:', error);
+        res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+});
+
 export default router;
