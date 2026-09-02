@@ -2,7 +2,7 @@
     <div class="header">
         <div class="name-ava">
             <img v-if="avatarUrl" :src="avatarUrl" alt="Аватар" class="icon" />
-            <div v-else class="icon"></div>
+            <div v-else class="icon" style="background: #7C6BC4; border: none;"></div>
             <p v-if="user && user.first_name" class="first_name" @click="goToProfile">{{ user.first_name }}</p>
         </div>
         <h2 class="title">WeekWork</h2>
@@ -15,8 +15,8 @@ const API_URL = 'https://weekwork-production-ea3e.up.railway.app';
 export default {
     data() {
         return {
-            avatarUrl: null,
-        }
+            avatarUrl: null
+        };
     },
     props: {
         user: {
@@ -35,12 +35,10 @@ export default {
         }
     },
     methods: {
-        goToProfile() {
-            this.$emit('open-profile');
-        },
         async fetchAvatar() {
             if (!this.user || !this.user.id) return;
             try {
+                // ИСПРАВЛЕНО: ? вместо &
                 const response = await fetch(`${API_URL}/api/user-avatar?telegram_id=${this.user.id}`);
                 const data = await response.json();
                 if (data.success && data.avatarUrl) {
@@ -50,6 +48,9 @@ export default {
                 console.error('Ошибка загрузки аватарки:', error);
             }
         },
+        goToProfile() {
+            this.$emit('open-profile');
+        }
     }
 }
 </script>
@@ -66,11 +67,10 @@ export default {
 }
 
 .icon {
-    background-color: #fff;
     border-radius: 50px;
-    width: 50px;
-    height: 50px;
-    border: 1px solid #000;
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
 }
 
 .name-ava {
@@ -89,5 +89,6 @@ export default {
     color: #000;
     font-size: 20px;
     font-weight: 600;
+    cursor: pointer;
 }
 </style>
