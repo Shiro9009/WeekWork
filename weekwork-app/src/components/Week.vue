@@ -5,7 +5,7 @@
                 <img class="icon-img-container" src="/calendar.svg" alt="">
                 <p class="text">Смен в этом месяце</p>
             </div>
-            <div class="count">12</div>
+            <div class="count">{{ monthly_shifts }}</div>
         </section>
 
         <section class="select-day">
@@ -85,9 +85,6 @@
 const API_URL = 'https://weekwork-production-ea3e.up.railway.app';
 
 export default {
-    props: {
-
-    },
     data() {
         return {
             days: {
@@ -100,6 +97,7 @@ export default {
                 Su: 0,
             },
             desc: '',
+            monthly_shifts: 0,
         }
     },
     methods: {
@@ -153,6 +151,19 @@ export default {
             }
         },
 
+    },
+    async mounted() {
+        if (this.$parent.user && this.$parent.user.id) {
+            try {
+                const response = await fetch(`${API_URL}/api/user-shifts?telegram_id=${this.$parent.user.id}`);
+                const data = await response.json();
+                if (data.monthly_shifts !== undefined) {
+                    this.monthly_shifts = data.monthly_shifts;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки смен: ', error);
+            }
+        }
     }
 }
 </script>
