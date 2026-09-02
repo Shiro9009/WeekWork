@@ -94,10 +94,16 @@ router.get('/api/user-data', async (req, res) => {
     }
 
     try {
+        const telegramId = Number(telegram_id);
+        
+        if (isNaN(telegramId)) {
+            return res.status(400).json({ error: 'Некорректный telegram_id' });
+        }
+
         const { data, error } = await supabase
             .from('users')
             .select('id, role, employer_id, monthly_shifts, is_on_leave, username')
-            .eq('telegram_id', telegram_id)
+            .eq('telegram_id', telegramId)
             .single();
 
         if (error || !data) {
