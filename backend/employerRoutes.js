@@ -333,7 +333,7 @@ router.get('/api/employer-info', async (req, res) => {
 
         const { data: employer, error: employerError } = await supabase
             .from('users')
-            .select('username')
+            .select('name')
             .eq('id', worker.employer_id)
             .single();
 
@@ -341,7 +341,7 @@ router.get('/api/employer-info', async (req, res) => {
             return res.status(404).json({ error: 'Работодатель не найден' });
         }
 
-        res.json({ username: employer.username });
+        res.json({ name: employer.username });
     } catch (error) {
         console.error('Ошибка в /api/employer-info:', error);
         res.status(500).json({ error: 'Внутренняя ошибка сервера' });

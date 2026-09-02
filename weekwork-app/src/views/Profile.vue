@@ -75,8 +75,8 @@ export default {
             try {
                 const response = await fetch(`${API_URL}/api/employer-info?telegram_id=${this.user.id}`);
                 const data = await response.json();
-                if (data.username) {
-                    this.employerUsername = data.username;
+                if (data.name) {
+                    this.employerUsername = data.name;
                 }
             } catch (error) {
                 console.error('Ошибка загрузки работодателя:', error);
