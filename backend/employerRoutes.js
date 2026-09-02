@@ -298,7 +298,6 @@ router.get('/api/user-role', async (req, res) => {
     res.json({ role: data.role });
 });
 
-
 router.get('/api/employer-info', async (req, res) => {
     const { telegram_id } = req.query;
     if (!telegram_id) {
@@ -308,12 +307,16 @@ router.get('/api/employer-info', async (req, res) => {
     try {
         const { data: worker, error: workerError } = await supabase
             .from('users')
-            .select('employer_id')
-            .eq('telegram_id', telegram_id)
+            .select('employer_id, name')
+            .eq('telegram_id', Number(telegram_id))
             .single();
 
-        if (workerError || !worker || !worker.employer_id) {
-            return res.status(404).json({ error: 'Работодатель не найден' });
+        if (workerError || !worker) {
+            return res.status(404).json({ error: 'Работник не найден' });
+        }
+
+        if (!worker.employer_id) {
+            return res.status(404).json({ error: 'Работодатель не назначен' });
         }
 
         const { data: employer, error: employerError } = await supabase
@@ -326,7 +329,8 @@ router.get('/api/employer-info', async (req, res) => {
             return res.status(404).json({ error: 'Работодатель не найден' });
         }
 
-        res.json({ name: employer.username });
+        res.json({ name: employer.name });
+
     } catch (error) {
         console.error('Ошибка в /api/employer-info:', error);
         res.status(500).json({ error: 'Внутренняя ошибка сервера' });
