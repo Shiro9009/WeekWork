@@ -306,7 +306,7 @@ router.get('/api/employer-info', async (req, res) => {
     const { data, error } = await supabase
         .from('users')
         .select('username')
-        .eq('id', employer_id)
+        .eq('telegram_id', employer_id)
         .single();
     if (error || !data) {
         return res.status(404).json({ error: 'Работодатель не найден' });

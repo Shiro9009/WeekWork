@@ -121,9 +121,10 @@ export default {
                 if (!data.success) {
                     this.isOnLeave = !this.isOnLeave;
                     alert('Ошибка обновления статуса');
-                } else {
-                    alert('Статус обновлён');
-                }
+                } 
+                // else {
+                //     alert('Статус обновлён');
+                // }
             } catch (error) {
                 console.log('Ошибка: ', error);
                 this.isOnLeave = !this.isOnLeave;
