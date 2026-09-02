@@ -2,7 +2,7 @@
     <div class="header">
         <div class="name-ava">
             <img v-if="avatarUrl" :src="avatarUrl" alt="Аватар" class="icon" />
-            <div v-else class="icon" style="background: #7C6BC4; border: none;"></div>
+            <div v-else class="icon" style="border: 2px solid #7C6BC4;"></div>
             <p v-if="user && user.first_name" class="first_name" @click="goToProfile">{{ user.first_name }}</p>
         </div>
         <h2 class="title">WeekWork</h2>
@@ -38,7 +38,6 @@ export default {
         async fetchAvatar() {
             if (!this.user || !this.user.id) return;
             try {
-                // ИСПРАВЛЕНО: ? вместо &
                 const response = await fetch(`${API_URL}/api/user-avatar?telegram_id=${this.user.id}`);
                 const data = await response.json();
                 if (data.success && data.avatarUrl) {
