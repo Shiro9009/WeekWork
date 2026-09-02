@@ -26,7 +26,8 @@
                     <p class="left-text">Отпуск / Экзамены / Личные причины</p>
                 </div>
                 <div class="rigth">
-                    <input class="leave-toggle" id="leave-toggle" type="checkbox" v-model="isOnLeave" @change="toggleLeave">
+                    <input class="leave-toggle" id="leave-toggle" type="checkbox" v-model="isOnLeave"
+                        @change="toggleLeave">
                     <label for="leave-toggle"></label>
                 </div>
             </div>
@@ -62,31 +63,54 @@ export default {
         }
     },
     async mounted() {
+        console.log('🔍 1. Profile mounted, user:', this.user);
+
         if (!this.user) {
             alert('Пользователь не авторизован');
             this.$router.push('/');
             return;
         }
 
+        console.log('🔍 2. user.id:', this.user.id);
+        console.log('🔍 3. user.employer_id:', this.user.employer_id);
+        console.log('🔍 4. role:', this.role);
+
         await this.fetchAvatar();
+
+        // Загружаем работодателя
+        console.log('🔍 5. Проверяем employer_id:', this.user.employer_id);
 
         if (this.user && this.user.employer_id) {
             try {
-                const response = await fetch(`${API_URL}/api/employer-info?employer_id=${this.user.employer_id}`);
+                const url = `${API_URL}/api/employer-info?employer_id=${this.user.employer_id}`;
+                console.log('🔍 6. Запрос к:', url);
+
+                const response = await fetch(url);
+                console.log('🔍 7. Статус ответа:', response.status);
+
                 const data = await response.json();
+                console.log('🔍 8. Данные от сервера:', data);
+
                 if (data.username) {
                     this.employerUsername = data.username;
+                    console.log('🔍 9. employerUsername установлен:', this.employerUsername);
+                } else {
+                    console.log('🔍 10. username не найден в ответе');
                 }
             } catch (error) {
-                console.error('Ошибка загрузки работодателя:', error);
+                console.error('🔍 11. Ошибка загрузки работодателя:', error);
             }
+        } else {
+            console.log('🔍 12. employer_id отсутствует или пустой');
         }
-        
+
+        // Загружаем статус отпуска
         if (this.role === 'worker') {
             try {
                 const response = await fetch(`${API_URL}/api/user-status?telegram_id=${this.user.id}`);
                 const data = await response.json();
                 this.isOnLeave = data.is_on_leave || false;
+                console.log('🔍 13. Статус отпуска:', this.isOnLeave);
             } catch (error) {
                 console.log('Ошибка загрузки статуса:', error);
             } finally {
@@ -95,6 +119,8 @@ export default {
         } else {
             this.loading = false;
         }
+
+        console.log('🔍 14. Финальный employerUsername:', this.employerUsername);
     },
     methods: {
         goBack() {
@@ -121,7 +147,7 @@ export default {
                 if (!data.success) {
                     this.isOnLeave = !this.isOnLeave;
                     alert('Ошибка обновления статуса');
-                } 
+                }
                 // else {
                 //     alert('Статус обновлён');
                 // }
@@ -284,7 +310,7 @@ label {
     cursor: pointer;
     width: 65px;
     height: 35px;
-    background-color:  #f3f4f6;
+    background-color: #f3f4f6;
     border-radius: 100px;
     position: relative;
 }
@@ -301,12 +327,12 @@ label::after {
     transition: 0.3s;
 }
 
-input:checked + label {
+input:checked+label {
     background-color: #7c6bc4;
 
 }
 
-input:checked + label::after {
+input:checked+label::after {
     left: calc(100% - 5px);
     transform: translateX(-100%);
     background-color: #fff;

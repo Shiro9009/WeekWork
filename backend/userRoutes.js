@@ -87,5 +87,29 @@ router.get('/api/user-avatar', async (req, res) => {
     }
 });
 
+router.get('/api/user-data', async (req, res) => {
+    const { telegram_id } = req.query;
+    if (!telegram_id) {
+        return res.status(400).json({ error: 'Не указан telegram_id' });
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select('id, role, employer_id, monthly_shifts, is_on_leave, username')
+            .eq('telegram_id', telegram_id)
+            .single();
+
+        if (error || !data) {
+            return res.status(404).json({ error: 'Пользователь не найден' });
+        }
+
+        res.json(data);
+    } catch (error) {
+        console.error('Ошибка в /api/user-data:', error);
+        res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+    }
+});
+
 
 export default router;
