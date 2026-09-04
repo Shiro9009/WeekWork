@@ -1,15 +1,29 @@
 <template>
     <div class="employer-page">
-        <h1>Управление расписанием</h1>
         <div v-if="loading"><img class="gif_loading" src="/loading-thinking.gif" alt="загрузка"></div>
         <div v-else>
+            <section class="workers-avatar">
+            <h2 class="workers-avatar-title">Сотрудники</h2>
+            <ul>
+                <li v-for="worker in workers" :key="worker.id" class="worker-item">
+                    <img 
+                        v-if="worker.avatarUrl" 
+                        :src="worker.avatarUrl" 
+                        alt="аватар" 
+                        class="worker-avatar"
+                    />
+                    <div v-else class="worker-avatar-placeholder">
+                        {{ worker.name.charAt(0).toUpperCase() }}
+                    </div>
+                    <div class="worker-info">
+                        <p class="worker-name">{{ worker.name }}</p>
+                        <p class="worker-shifts">{{ worker.monthly_shifts || 0 }} см.</p>
+                    </div>
+                </li>
+            </ul>
+        </section>
+            
             <div v-if="final">
-                <h2>Подчинённые</h2>
-                <ul>
-                    <li v-for="worker in workers" :key="worker.id">
-                        {{ worker.name }}
-                    </li>
-                </ul>
                 <h2>Финальное</h2>
                 <div v-for="(names, day) in final" :key="day">
                     <strong>{{ day }}:</strong>
@@ -23,14 +37,6 @@
                 <button v-if="hasChenges" @click="saveSchedule" class="save-btn">Сохранить</button>
             </div>
             <div v-else>
-                <div class="workers">
-                    <h2>Подчинённые</h2>
-                    <ul>
-                        <li v-for="worker in workers" :key="worker.id">
-                            {{ worker.name }}
-                        </li>
-                    </ul>
-                </div>
                 <div class="options" v-if="options && options.length > 0">
                     <h2>Варианты расписания</h2>
                     <div v-for="option in options" :key="option.option_number" class="option-card">
@@ -118,7 +124,29 @@ export default {
         try {
             const response = await fetch(`${API_URL}/api/employer-data?telegram_id=${userData.id}`);
             const data = await response.json();
-            this.workers = data.workers || [];
+            
+            // Загружаем аватарки для каждого работника
+            const workersWithAvatars = await Promise.all(
+                (data.workers || []).map(async (worker) => {
+                    try {
+                        const avatarResponse = await fetch(
+                            `${API_URL}/api/user-avatar?telegram_id=${worker.telegram_id}`
+                        );
+                        const avatarData = await avatarResponse.json();
+                        return {
+                            ...worker,
+                            avatarUrl: avatarData.success ? avatarData.avatarUrl : null
+                        };
+                    } catch {
+                        return {
+                            ...worker,
+                            avatarUrl: null
+                        };
+                    }
+                })
+            );
+            
+            this.workers = workersWithAvatars;
             this.options = data.options || [];
             this.weekStart = data.week_start;
             this.final = data.final || null;
@@ -128,8 +156,10 @@ export default {
             this.loading = false;
         }
 
-        for (const day in this.final) {
-            this.showSelect[day] = false;
+        if (this.final) {
+            for (const day in this.final) {
+                this.showSelect[day] = false;
+            }
         }
     },
     methods: {
@@ -167,7 +197,6 @@ export default {
                 if (result.success) {
                     alert('Расписание выбрано!');
                     location.reload();
-                    this.final = true;
                 } else {
                     alert('Ошибка: ' + result.error);
                 }
@@ -206,7 +235,9 @@ export default {
         },
         replaceWorker(day, event) {
             const newName = event.target.value;
-            this.final[day] = [newName];
+            if (this.final) {
+                this.final[day] = [newName];
+            }
             this.showSelect[day] = false;
             this.hasChenges = true;
         },
@@ -286,5 +317,13 @@ export default {
 
 .cancel-btn:hover {
     background: #666;
+}
+
+.workers-avatar-title {
+    color: #111827;
+    font-size: 20px;
+    width: 380px;
+    display: flex;
+    margin: 20px auto;
 }
 </style>

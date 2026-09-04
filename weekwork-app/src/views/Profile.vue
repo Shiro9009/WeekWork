@@ -14,7 +14,7 @@
                     <img src="/shopping-bag.svg" alt="пакет" class="markert-icon">
                     <div class="employer-username-img">
                         <img src="/user.svg" alt="челоовек" class="user-img">
-                        <p class="employer-name">@{{ employerUsername }} </p>
+                        <p class="employer-name">{{ employerUsername }} </p>
                     </div>
                 </div>
             </div>
@@ -231,7 +231,7 @@ export default {
     border-radius: 6px;
     padding: 4px 8px;
     max-width: 241px;
-    min-width: 141;
+    min-width: 101;
     height: 21px;
 }
 

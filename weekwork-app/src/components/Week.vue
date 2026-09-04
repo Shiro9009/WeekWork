@@ -8,77 +8,83 @@
             <div class="count">{{ monthly_shifts }}</div>
         </section>
 
-        <section class="select-day">
-            <div class="title-container">
-                <p class="text-shifts">График работы</p>
-                <p class="text-week">Неделя 18–24 авг</p>
-            </div>
-            <ul>
-                <li @click="selector('Mo')" :class="{
-                    'selected': days.Mo === 1,
-                    'priority': days.Mo === 2,
-                    'unavailable': days.Mo === 3
-                }">Пн</li>
-                <li @click="selector('Tu')" :class="{
-                    'selected': days.Tu === 1,
-                    'priority': days.Tu === 2,
-                    'unavailable': days.Tu === 3
-                }">Вт</li>
-                <li @click="selector('We')" :class="{
-                    'selected': days.We === 1,
-                    'priority': days.We === 2,
-                    'unavailable': days.We === 3
-                }">Ср</li>
-                <li @click="selector('Th')" :class="{
-                    'selected': days.Th === 1,
-                    'priority': days.Th === 2,
-                    'unavailable': days.Th === 3
-                }">Чт</li>
-                <li @click="selector('Fr')" :class="{
-                    'selected': days.Fr === 1,
-                    'priority': days.Fr === 2,
-                    'unavailable': days.Fr === 3
-                }">Пт</li>
-                <li @click="selector('Sa')" :class="{
-                    'selected': days.Sa === 1,
-                    'priority': days.Sa === 2,
-                    'unavailable': days.Sa === 3
-                }">Сб</li>
-                <li @click="selector('Su')" :class="{
-                    'selected': days.Su === 1,
-                    'priority': days.Su === 2,
-                    'unavailable': days.Su === 3
-                }">Вс</li>
-            </ul>
-            <div class="description-container">
-                <div class="def">
-                    <div class="def-item"></div>
-                    <p>Обычный</p>
-                </div>
-                <div class="sel">
-                    <div class="sel-item"></div>
-                    <p>Готов</p>
-                </div>
-                <div class="pri">
-                    <img class="pri-item" src="/star.svg" alt="звезда">
-                    <p>Приоритет</p>
-                </div>
-                <div class="una">
-                    <div class="una-item"></div>
-                    <p>Не могу</p>
-                </div>
-            </div>
-        </section>
-        <section class="nuances">
-            <h3 class="nuances-title">Нюансы на неделю</h3>
-            <div class="form">
-                <textarea class="Descriprion" placeholder="Опишите пожелания или ограничения... "
-                    v-model="desc"></textarea>
-            </div>
-        </section>
-        <button @click="sendData()" class="Send-data">Отправить данные</button>
-    </div>
+        <div v-if="isSubmitted" class="submitted-message">
+            <p class="submitted-title">Данные отправлены</p>
+            <p class="submitted-text">Скоро ваш работодатель выберет расписание.</p>
+        </div>
 
+        <div v-else>
+            <section class="select-day">
+                <div class="title-container">
+                    <p class="text-shifts">График работы</p>
+                    <p class="text-week">{{ weekRange }}</p>
+                </div>
+                <ul>
+                    <li @click="selector('Mo')" :class="{
+                        'selected': days.Mo === 1,
+                        'priority': days.Mo === 2,
+                        'unavailable': days.Mo === 3
+                    }">Пн</li>
+                    <li @click="selector('Tu')" :class="{
+                        'selected': days.Tu === 1,
+                        'priority': days.Tu === 2,
+                        'unavailable': days.Tu === 3
+                    }">Вт</li>
+                    <li @click="selector('We')" :class="{
+                        'selected': days.We === 1,
+                        'priority': days.We === 2,
+                        'unavailable': days.We === 3
+                    }">Ср</li>
+                    <li @click="selector('Th')" :class="{
+                        'selected': days.Th === 1,
+                        'priority': days.Th === 2,
+                        'unavailable': days.Th === 3
+                    }">Чт</li>
+                    <li @click="selector('Fr')" :class="{
+                        'selected': days.Fr === 1,
+                        'priority': days.Fr === 2,
+                        'unavailable': days.Fr === 3
+                    }">Пт</li>
+                    <li @click="selector('Sa')" :class="{
+                        'selected': days.Sa === 1,
+                        'priority': days.Sa === 2,
+                        'unavailable': days.Sa === 3
+                    }">Сб</li>
+                    <li @click="selector('Su')" :class="{
+                        'selected': days.Su === 1,
+                        'priority': days.Su === 2,
+                        'unavailable': days.Su === 3
+                    }">Вс</li>
+                </ul>
+                <div class="description-container">
+                    <div class="def">
+                        <div class="def-item"></div>
+                        <p>Обычный</p>
+                    </div>
+                    <div class="sel">
+                        <div class="sel-item"></div>
+                        <p>Готов</p>
+                    </div>
+                    <div class="pri">
+                        <img class="pri-item" src="/star.svg" alt="звезда">
+                        <p>Приоритет</p>
+                    </div>
+                    <div class="una">
+                        <div class="una-item"></div>
+                        <p>Не могу</p>
+                    </div>
+                </div>
+            </section>
+            <section class="nuances">
+                <h3 class="nuances-title">Нюансы на неделю</h3>
+                <div class="form">
+                    <textarea class="Descriprion" placeholder="Опишите пожелания или ограничения... "
+                        v-model="desc"></textarea>
+                </div>
+            </section>
+            <button @click="sendData()" class="Send-data">Отправить данные</button>
+        </div>
+    </div>
 </template>
 
 <script>
@@ -98,9 +104,34 @@ export default {
             },
             desc: '',
             monthly_shifts: 0,
+            weekRange: '',
+            isSubmitted: false,
         }
     },
     methods: {
+        getNextWeekStart() {
+            const now = new Date();
+            const day = now.getDay();
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(now.setDate(diff));
+            monday.setDate(monday.getDate() + 7);
+            return monday;
+        },
+        formatDate(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            return `${day}.${month}`;
+        },
+        updateWeekRange() {
+            const weekStart = this.getNextWeekStart();
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekEnd.getDate() + 6);
+
+            const startStr = this.formatDate(weekStart);
+            const endStr = this.formatDate(weekEnd);
+
+            this.weekRange = `Неделя ${startStr}–${endStr}`;
+        },
         selector(day) {
             const current = this.days[day];
             const next = (current + 1) % 4;
@@ -141,7 +172,10 @@ export default {
                 const result = await response.json()
 
                 if (result.success) {
-                    alert('Данные сохранены')
+                    // Сохраняем статус в localStorage
+                    localStorage.setItem('weekSubmitted', 'true');
+                    this.isSubmitted = true;
+                    alert('Данные сохранены');
                 } else {
                     alert('Ошибка: ' + result.error)
                 }
@@ -150,9 +184,19 @@ export default {
                 alert('Не удалось отправить данные')
             }
         },
-
+        checkSubmittedStatus() {
+            const weekStart = this.getNextWeekStart();
+            const weekKey = `weekSubmitted_${weekStart.toISOString().split('T')[0]}`;
+            const status = localStorage.getItem(weekKey);
+            if (status === 'true') {
+                this.isSubmitted = true;
+            }
+        }
     },
     async mounted() {
+        this.updateWeekRange();
+        this.checkSubmittedStatus();
+
         if (this.$parent.user && this.$parent.user.id) {
             try {
                 const response = await fetch(`${API_URL}/api/user-shifts?telegram_id=${this.$parent.user.id}`);
@@ -186,7 +230,6 @@ export default {
     height: 30px;
     justify-content: space-between;
     align-items: center;
-
 }
 
 .icon-img-container {
@@ -195,7 +238,6 @@ export default {
     height: 20px;
     padding: 7px;
     border-radius: 8px;
-
 }
 
 .icon-text {
@@ -215,6 +257,39 @@ export default {
     color: #fff;
     font-size: 20px;
     font-weight: 600;
+}
+
+.submitted-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 60px auto;
+    padding: 30px;
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    width: 358px;
+    min-height: 200px;
+}
+
+.check-icon {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 16px;
+}
+
+.submitted-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+.submitted-text {
+    font-size: 16px;
+    color: #6b7280;
+    text-align: center;
 }
 
 ul {
@@ -257,7 +332,6 @@ li.unavailable {
     color: #9c5a6c;
     border: 1px solid #9c5a6c;
 }
-
 
 button:active {
     transform: scaleY(1.1);
@@ -374,7 +448,6 @@ button {
     box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.08);
     background: #7c6bc4;
 }
-
 
 @media (max-width: 375px) {
     ul {

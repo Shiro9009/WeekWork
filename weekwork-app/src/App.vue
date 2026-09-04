@@ -1,15 +1,24 @@
 <template>
-  <div v-if="loading" class="loading"><img class="gif_loading" src="/loading-thinking.gif" alt="загрузка"></div>
-  <div v-else>
-    <router-view v-if="$route.path === '/profile'" :user="user" />
+  <div>
+    <div v-if="!isTelegramApp" class="dev-switcher">
+      <button @click="setRole('worker')" :class="{ active: userRole === 'worker' }">Работник</button>
+      <button @click="setRole('employer')" :class="{ active: userRole === 'employer' }">Работодатель</button>
+    </div>
+
+    <div v-if="loading" class="loading">
+      <img class="gif_loading" src="/loading-thinking.gif" alt="загрузка">
+    </div>
     <div v-else>
-      <div v-if="userRole === 'employer'">
-        <Top :user="user" @open-profile="goToProfile" />
-        <EmployerView :user="user" />
-      </div>
+      <router-view v-if="$route.path === '/profile'" :user="user" />
       <div v-else>
-        <Top :user="user" @open-profile="goToProfile" />
-        <Week />
+        <div v-if="userRole === 'employer'">
+          <Top :user="user" @open-profile="goToProfile" />
+          <EmployerView :user="user" />
+        </div>
+        <div v-else>
+          <Top :user="user" @open-profile="goToProfile" />
+          <Week />
+        </div>
       </div>
     </div>
   </div>
@@ -28,10 +37,13 @@ export default {
     return {
       user: null,
       userRole: null,
-      loading: true
+      loading: true,
+      isTelegramApp: false
     };
   },
   async mounted() {
+    this.isTelegramApp = !!(window.Telegram?.WebApp);
+
     console.log('Проверяем window.Telegram: ', window.Telegram);
 
     let userData = null;
@@ -66,7 +78,11 @@ export default {
       console.log('Пользователь загружен');
     } else {
       console.log('Данных нет, показываем заглушку');
-      this.user = { first_name: 'ТЕСТ', username: 'test_user' };
+      this.user = { 
+        id: 8063928217,
+        first_name: 'Gowqee', 
+        username: 'Gowqiiii' 
+      };
     }
 
     if (window.Telegram?.WebApp) {
@@ -100,6 +116,23 @@ export default {
           role: this.userRole,
          }
       });
+    },
+    setRole(role) {
+      this.userRole = role;
+      if (role === 'employer') {
+        this.user = {
+          id: 943285019,
+          first_name: 'Shiro',
+          username: 'shiron999'
+        };
+      } else {
+        this.user = {
+          id: 8063928217,
+          first_name: 'Gowqee',
+          username: 'Gowqiiii'
+        };
+      }
+      this.loading = false;
     }
   }
 };

@@ -21,7 +21,7 @@ router.get('/api/employer-data', async (req, res) => {
     }
     const { data: workers } = await supabase
         .from('users')
-        .select('id, name')
+        .select('id, name, telegram_id, monthly_shifts')
         .eq('employer_id', employer.id)
         .eq('role', 'worker');
     const weekStart = getNextWeekStart();
