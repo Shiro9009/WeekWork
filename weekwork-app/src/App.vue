@@ -1,10 +1,5 @@
 <template>
   <div>
-    <div v-if="!isTelegramApp" class="dev-switcher">
-      <button @click="setRole('worker')" :class="{ active: userRole === 'worker' }">Работник</button>
-      <button @click="setRole('employer')" :class="{ active: userRole === 'employer' }">Работодатель</button>
-    </div>
-
     <div v-if="loading" class="loading">
       <img class="gif_loading" src="/loading-thinking.gif" alt="загрузка">
     </div>

@@ -17,19 +17,17 @@ export function cleanPhoneNumber(phone) {
 
 export async function generationSchedule(employerId, weekStart) {
     console.log('Генерация расписания вызвана для:', employerId, weekStart);
-    
+
     const { error: deleteError } = await supabase
         .from('shift_options')
         .delete()
-        .eq('employer_id', employerId);
+        .eq('employer_id', employerId)
+        .eq('week_start', weekStart);
 
     if (deleteError) {
         console.log('Ошибка удаления старых вариантов', deleteError);
         return;
     }
-
-    console.log('Старые варианты удалены');
-    console.log('Генерация расписания для ', employerId);
 
     const { data: workers, error: workersError } = await supabase
         .from('users')
@@ -62,7 +60,7 @@ export async function generationSchedule(employerId, weekStart) {
     }
 
     for (let optionNumber = 1; optionNumber <= 3; optionNumber++) {
-        const schedule = generateSimpleSchedule(workers, availabilityMap);
+        const schedule = generateSchedule(workers, availabilityMap, optionNumber);
 
         const { data: existing } = await supabase
             .from('shift_options')
@@ -88,8 +86,6 @@ export async function generationSchedule(employerId, weekStart) {
         }
     }
 
-    console.log('3 варианта расписания сохранены');
-
     const { data: employer, error: employerError } = await supabase
         .from('users')
         .select('telegram_id')
@@ -97,33 +93,38 @@ export async function generationSchedule(employerId, weekStart) {
         .single();
 
     if (!employerError && employer) {
-        const employerTelegramId = employer.telegram_id;
         await bot.sendMessage(
-            employerTelegramId,
-            'Все работники выбрали дни! Варианты расписания готовы. Откройте приложение, чтобы выбрать подходящий вариант.'
+            employer.telegram_id,
+            'Все работники выбрали дни! Варианты расписания готовы.'
         );
-        console.log('Уведомление отправлено работодателю');
-    } else {
-        console.log('Не удалось найти работодателя');
     }
 }
 
-function generateSimpleSchedule(workers, availabilityMap) {
+function generateSchedule(workers, availabilityMap, optionNumber) {
+    if (optionNumber === 1) {
+        return generateOptimalSchedule(workers, availabilityMap);
+    } else if (optionNumber === 2) {
+        return generateBalancedSchedule(workers, availabilityMap);
+    } else {
+        return generateRandomSchedule(workers, availabilityMap);
+    }
+}
+
+function generateOptimalSchedule(workers, availabilityMap) {
     const daysOfWeek = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
     const schedule = {};
-    
     const shiftCount = {};
     workers.forEach(w => shiftCount[w.id] = 0);
 
     for (const day of daysOfWeek) {
         const priority = workers.filter(w => {
             const status = availabilityMap[w.id]?.[day] || 0;
-            return status === 2;
+            return status === 2 && shiftCount[w.id] < (w.monthly_shifts || 999);
         });
 
         const selected = workers.filter(w => {
             const status = availabilityMap[w.id]?.[day] || 0;
-            return status === 1;
+            return status === 1 && shiftCount[w.id] < (w.monthly_shifts || 999);
         });
 
         const unavailable = workers.filter(w => {
@@ -131,33 +132,111 @@ function generateSimpleSchedule(workers, availabilityMap) {
             return status === 3;
         });
 
-        let available = priority.filter(w => 
-            shiftCount[w.id] < (w.monthly_shifts || 999)
-        );
-        let shuffled = [...available].sort(() => Math.random() - 0.5);
-        let assigned = shuffled.slice(0, 1);
+        let pool = [];
 
-        if (assigned.length < 1) {
-            const availableSelected = selected.filter(w => 
+        if (priority.length > 0) {
+            pool = priority;
+        } else if (selected.length > 0) {
+            pool = selected;
+        } else {
+            pool = workers.filter(w =>
+                !unavailable.includes(w) &&
                 shiftCount[w.id] < (w.monthly_shifts || 999)
             );
-            const shuffledSelected = [...availableSelected].sort(() => Math.random() - 0.5);
-            assigned = shuffledSelected.slice(0, 1);
         }
 
-        if (assigned.length === 0) {
-            const availableAll = workers.filter(w => 
-                !unavailable.includes(w) && shiftCount[w.id] < (w.monthly_shifts || 999)
-            );
-            const shuffledAll = [...availableAll].sort(() => Math.random() - 0.5);
-            assigned = shuffledAll.slice(0, 1);
+        if (pool.length === 0) {
+            schedule[day] = [];
+            continue;
         }
+
+        const shuffled = [...pool].sort(() => Math.random() - 0.5);
+        const assigned = shuffled.slice(0, 1);
 
         schedule[day] = assigned.map(w => w.name);
+        assigned.forEach(w => shiftCount[w.id]++);
+    }
 
-        assigned.forEach(w => {
-            shiftCount[w.id] = (shiftCount[w.id] || 0) + 1;
+    return schedule;
+}
+
+function generateBalancedSchedule(workers, availabilityMap) {
+    const daysOfWeek = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+    const schedule = {};
+    const shiftCount = {};
+    workers.forEach(w => shiftCount[w.id] = 0);
+
+    for (const day of daysOfWeek) {
+        const available = workers.filter(w => {
+            const status = availabilityMap[w.id]?.[day] || 0;
+            return status !== 3 && shiftCount[w.id] < (w.monthly_shifts || 999);
         });
+
+        if (available.length === 0) {
+            schedule[day] = [];
+            continue;
+        }
+
+        available.sort((a, b) => shiftCount[a.id] - shiftCount[b.id]);
+
+        const minCount = shiftCount[available[0].id];
+        const leastLoaded = available.filter(w => shiftCount[w.id] === minCount);
+
+        const shuffled = [...leastLoaded].sort(() => Math.random() - 0.5);
+        const assigned = shuffled.slice(0, 1);
+
+        schedule[day] = assigned.map(w => w.name);
+        assigned.forEach(w => shiftCount[w.id]++);
+    }
+
+    return schedule;
+}
+
+function generateRandomSchedule(workers, availabilityMap) {
+    const daysOfWeek = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+    const schedule = {};
+    const shiftCount = {};
+    workers.forEach(w => shiftCount[w.id] = 0);
+
+    for (const day of daysOfWeek) {
+        const priority = workers.filter(w => {
+            const status = availabilityMap[w.id]?.[day] || 0;
+            return status === 2 && shiftCount[w.id] < (w.monthly_shifts || 999);
+        });
+
+        const selected = workers.filter(w => {
+            const status = availabilityMap[w.id]?.[day] || 0;
+            return status === 1 && shiftCount[w.id] < (w.monthly_shifts || 999);
+        });
+
+        const unavailable = workers.filter(w => {
+            const status = availabilityMap[w.id]?.[day] || 0;
+            return status === 3;
+        });
+
+        let pool = [];
+
+        if (priority.length > 0) {
+            pool = priority;
+        } else if (selected.length > 0) {
+            pool = selected;
+        } else {
+            pool = workers.filter(w =>
+                !unavailable.includes(w) &&
+                shiftCount[w.id] < (w.monthly_shifts || 999)
+            );
+        }
+
+        if (pool.length === 0) {
+            schedule[day] = [];
+            continue;
+        }
+
+        const shuffled = [...pool].sort(() => Math.random() - 0.5);
+        const assigned = shuffled.slice(0, 1);
+
+        schedule[day] = assigned.map(w => w.name);
+        assigned.forEach(w => shiftCount[w.id]++);
     }
 
     return schedule;
