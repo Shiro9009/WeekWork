@@ -200,6 +200,9 @@ bot.on('message', async (msg) => {
 });
 
 bot.on('callback_query', async (callbackQuery) => {
+    console.log('=== CALLBACK ПОЛУЧЕН ===');
+    console.log('data:', callbackQuery.data);
+    console.log('from:', callbackQuery.from.id);
     const chatId = callbackQuery.message.chat.id;
     const telegramId = callbackQuery.from.id;
     const data = callbackQuery.data;
