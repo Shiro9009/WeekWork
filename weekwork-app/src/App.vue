@@ -73,11 +73,7 @@ export default {
       console.log('Пользователь загружен');
     } else {
       console.log('Данных нет, показываем заглушку');
-      this.user = { 
-        id: 8063928217,
-        first_name: 'Gowqee', 
-        username: 'Gowqiiii' 
-      };
+
     }
 
     if (window.Telegram?.WebApp) {

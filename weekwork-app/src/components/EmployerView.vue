@@ -18,26 +18,40 @@
                 </ul>
             </section>
             <div v-if="final" class="final-schedule">
-                <h2 class="final-title">Финальное расписание</h2>
+                <div class="final-head">
+                    <h2 class="final-title">Финальное расписание</h2>
+                    <button v-if="!isEditing" @click="startEditing" class="edit-schedule-btn">Изменить состав</button>
+                </div>
                 <div class="final-list">
-                    <div v-for="day in sortedFinalDays" :key="day" class="final-item">
+                    <div v-for="day in sortedFinalDays" :key="day" class="final-item"
+                        :class="{ 'final-item-changed': isDayChanged(day) }">
                         <div class="final-day">
                             <span class="final-day-name">{{ getDayLabel(day) }}</span>
                             <span class="final-day-date">{{ getDayDate(day) }}</span>
                         </div>
                         <div class="final-worker">
-                            <span v-if="!showSelect[day]" @click="openSelect(day)" class="final-worker-name">
-                                {{ final[day].join(', ') || '—' }}
-                            </span>
-                            <select v-else @change="replaceWorker(day, $event)" class="final-select">
+                            <select v-if="isEditing" class="final-select" :value="getFinalName(day)"
+                                @change="replaceWorker(day, $event)">
+                                <option value="">Никого</option>
                                 <option v-for="worker in workers" :key="worker.id" :value="worker.name">
                                     {{ worker.name }}
                                 </option>
                             </select>
+                            <span v-else class="final-worker-name">
+                                {{ getFinalNames(day).join(', ') || '—' }}
+                            </span>
                         </div>
                     </div>
                 </div>
-                <button v-if="hasChenges" @click="saveSchedule" class="save-btn">Сохранить</button>
+                <div v-if="isEditing" class="final-actions">
+                    <p class="final-hint">{{ hasChanges ? 'Изменения ещё не сохранены' : 'Выберите работников на дни' }}</p>
+                    <div class="final-actions-btns">
+                        <button @click="saveSchedule" class="save-btn" :disabled="!hasChanges || saving">
+                            {{ saving ? 'Сохраняем...' : 'Сохранить' }}
+                        </button>
+                        <button @click="cancelEditing" class="cancel-btn" :disabled="saving">Отмена</button>
+                    </div>
+                </div>
             </div>
             <div v-else>
                 <div class="options" v-if="options && options.length > 0">
@@ -93,8 +107,9 @@ export default {
             loading: true,
             weekStart: null,
             final: null,
-            showSelect: {},
-            hasChenges: false,
+            originalFinal: null,
+            hasChanges: false,
+            saving: false,
             isEditing: false,
             showShiftEditor: false,
             editingWorker: null,
@@ -207,9 +222,7 @@ export default {
         }
 
         if (this.final) {
-            for (const day in this.final) {
-                this.showSelect[day] = false;
-            }
+            this.originalFinal = JSON.parse(JSON.stringify(this.final));
         }
     },
     methods: {
@@ -370,23 +383,59 @@ export default {
                 alert('Не удалось отправить данные');
             }
         },
-        openSelect(day) {
-            this.showSelect[day] = true;
+        getFinalNames(day) {
+            const names = this.final ? this.final[day] : null;
+            return Array.isArray(names) ? names : [];
+        },
+        getFinalName(day) {
+            return this.getFinalNames(day)[0] || '';
+        },
+        dayNames(day, source) {
+            const names = source && source[day];
+            return Array.isArray(names) ? names.join('|') : '';
+        },
+        isDayChanged(day) {
+            if (!this.isEditing || !this.originalFinal) return false;
+            return this.dayNames(day, this.originalFinal) !== this.dayNames(day, this.final);
+        },
+        checkChanges() {
+            if (!this.originalFinal || !this.final) return false;
+            const days = new Set([...Object.keys(this.originalFinal), ...Object.keys(this.final)]);
+            for (const day of days) {
+                if (this.dayNames(day, this.originalFinal) !== this.dayNames(day, this.final)) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        startEditing() {
+            this.originalFinal = JSON.parse(JSON.stringify(this.final));
+            this.hasChanges = false;
+            this.isEditing = true;
+        },
+        cancelEditing() {
+            if (this.originalFinal) {
+                this.final = JSON.parse(JSON.stringify(this.originalFinal));
+            }
+            this.hasChanges = false;
+            this.isEditing = false;
         },
         replaceWorker(day, event) {
+            if (!this.final) return;
             const newName = event.target.value;
-            if (this.final) {
-                this.final[day] = [newName];
-            }
-            this.showSelect[day] = false;
-            this.saveSchedule();
+            this.final[day] = newName ? [newName] : [];
+            this.hasChanges = this.checkChanges();
         },
         async saveSchedule() {
+            if (!this.hasChanges || this.saving) return;
+
             const payload = {
                 telegram_id: this.user.id,
                 week_start: this.weekStart,
                 schedule: this.final,
             };
+
+            this.saving = true;
 
             try {
                 const response = await fetch(`${API_URL}/api/update-schedule`, {
@@ -398,13 +447,34 @@ export default {
                 const data = await response.json();
 
                 if (data.success) {
-                    this.hasChenges = false;
+                    if (Array.isArray(data.shifts)) {
+                        for (const shift of data.shifts) {
+                            const worker = this.workers.find(w => w.id === shift.user_id);
+                            if (worker) worker.monthly_shifts = shift.monthly_shifts;
+                        }
+                    }
+                    this.originalFinal = JSON.parse(JSON.stringify(this.final));
+                    this.hasChanges = false;
+                    this.isEditing = false;
+
+                    const notified = Array.isArray(data.notified) ? data.notified : [];
+                    const failed = Array.isArray(data.notNotified) ? data.notNotified : [];
+
+                    if (notified.length === 0) {
+                        alert('Расписание сохранено, но уведомления не дошли: ' + (failed.join(', ') || 'нет затронутых работников'));
+                    } else if (failed.length > 0) {
+                        alert(`Расписание сохранено. Уведомлены: ${notified.join(', ')}. Не дошло: ${failed.join(', ')}`);
+                    } else {
+                        alert('Расписание сохранено. Уведомлены: ' + notified.join(', '));
+                    }
                 } else {
                     alert('Ошибка: ' + data.error);
                 }
             } catch (error) {
                 console.error('Ошибка сохранения:', error);
                 alert('Не удалось сохранить');
+            } finally {
+                this.saving = false;
             }
         }
     }
@@ -844,4 +914,78 @@ export default {
 .final-select:focus {
     border-color: #5a4a9e;
 }
+
+.final-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 380px;
+    margin: 20px auto 0;
+}
+
+.final-head .final-title {
+    margin: 0;
+    width: auto;
+}
+
+.edit-schedule-btn {
+    background: #fff;
+    color: #7C6BC4;
+    border: 1px solid #9B8FD8;
+    border-radius: 100px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.edit-schedule-btn:hover {
+    background: #f3f0fc;
+    border-color: #7C6BC4;
+}
+
+.final-item-changed {
+    border-color: #7C6BC4;
+    background: #f9f7ff;
+}
+
+.final-actions {
+    width: 380px;
+    margin: 0 auto;
+    padding-top: 14px;
+}
+
+.final-hint {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: #6b7280;
+    text-align: center;
+}
+
+.final-actions-btns {
+    display: flex;
+    gap: 10px;
+}
+
+.final-actions-btns .save-btn,
+.final-actions-btns .cancel-btn {
+    flex: 1;
+    margin: 0;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.save-btn:disabled,
+.cancel-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.save-btn:not(:disabled):hover {
+    background: #310597;
+}
+
 </style>
