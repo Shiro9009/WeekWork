@@ -20,7 +20,6 @@
             <div v-if="final" class="final-schedule">
                 <div class="final-head">
                     <h2 class="final-title">Финальное расписание</h2>
-                    <button v-if="!isEditing" @click="startEditing" class="edit-schedule-btn">Изменить состав</button>
                 </div>
                 <div class="final-list">
                     <div v-for="day in sortedFinalDays" :key="day" class="final-item"
@@ -43,6 +42,7 @@
                         </div>
                     </div>
                 </div>
+                <button v-if="!isEditing" @click="startEditing" class="edit-schedule-btn">Изменить состав</button>
                 <div v-if="isEditing" class="final-actions">
                     <p class="final-hint">{{ hasChanges ? 'Изменения ещё не сохранены' : 'Выберите работников на дни' }}</p>
                     <div class="final-actions-btns">
@@ -933,7 +933,8 @@ export default {
     color: #7C6BC4;
     border: 1px solid #9B8FD8;
     border-radius: 100px;
-    padding: 8px 16px;
+    padding: 8px 10px;
+    margin-top: 10px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
