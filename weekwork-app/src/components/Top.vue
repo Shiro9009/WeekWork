@@ -10,7 +10,7 @@
 </template>
 
 <script>
-const API_URL = 'https://weekwork-production-ea3e.up.railway.app';
+const API_URL = 'https://weekwork.onrender.com';
 
 export default {
     data() {

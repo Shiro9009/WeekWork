@@ -24,7 +24,7 @@ import Week from './components/Week.vue';
 import Top from './components/Top.vue';
 import EmployerView from './components/EmployerView.vue';
 
-const API_URL = 'https://weekwork-production-ea3e.up.railway.app';
+const API_URL = 'https://weekwork.onrender.com';
 
 export default {
   components: { Week, Top, EmployerView },

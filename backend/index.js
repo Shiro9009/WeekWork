@@ -8,8 +8,8 @@ import userRoutes from './userRoutes.js';
 import './handlers.js';
 
 export const supabase = createClient(
-    'https://uflyeztyiwgpginhvmuk.supabase.co',
-    'sb_publishable_agsPcqilP09Nxf_SKM4ETg_LfnzGXJ4'
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_KEY
 );
 
 const app = express();
