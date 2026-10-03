@@ -38,10 +38,40 @@ bot.onText(/\/reset/, async (msg) => {
     const telegramId = msg.from.id;
     const chatId = msg.chat.id;
 
+    const { data: user } = await supabase
+        .from('users')
+        .select('id, role')
+        .eq('telegram_id', telegramId)
+        .single();
+
+    if (!user) {
+        await supabase.from('user_sessions').delete().eq('user_id', telegramId);
+        await bot.sendMessage(chatId, 'Профиль сброшен');
+        return;
+    }
+
+    await supabase.from('weekly_availability').delete().eq('worker_id', user.id);
+
+    if (user.role === 'employer') {
+        await supabase.from('shift_options').delete().eq('employer_id', user.id);
+        await supabase.from('final_schedule').delete().eq('employer_id', user.id);
+    } else {
+        const { data: employer } = await supabase
+            .from('users')
+            .select('id')
+            .eq('telegram_id', telegramId)
+            .single();
+    }
+
     await supabase.from('user_sessions').delete().eq('user_id', telegramId);
-    await supabase.from('users').update({ role: null, employer_id: null }).eq('telegram_id', telegramId);
-    await bot.sendMessage(chatId, 'Профиль сброщен')
-})
+    await supabase.from('users').update({
+        role: null,
+        employer_id: null,
+        is_on_leave: false
+    }).eq('telegram_id', telegramId);
+
+    await bot.sendMessage(chatId, 'Профиль сброшен');
+});
 
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
