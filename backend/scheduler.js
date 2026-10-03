@@ -31,7 +31,7 @@ export async function generationSchedule(employerId, weekStart) {
 
     const { data: workers, error: workersError } = await supabase
         .from('users')
-        .select('id, name, monthly_shifts')
+        .select('id, name, shifts_left')
         .eq('employer_id', employerId)
         .eq('role', 'worker')
         .eq('is_on_leave', false);
@@ -119,12 +119,12 @@ function generateOptimalSchedule(workers, availabilityMap) {
     for (const day of daysOfWeek) {
         const priority = workers.filter(w => {
             const status = availabilityMap[w.id]?.[day] || 0;
-            return status === 2 && shiftCount[w.id] < (w.monthly_shifts || 999);
+            return status === 2 && shiftCount[w.id] < (w.shifts_left || 999);
         });
 
         const selected = workers.filter(w => {
             const status = availabilityMap[w.id]?.[day] || 0;
-            return status === 1 && shiftCount[w.id] < (w.monthly_shifts || 999);
+            return status === 1 && shiftCount[w.id] < (w.shifts_left || 999);
         });
 
         const unavailable = workers.filter(w => {
@@ -141,7 +141,7 @@ function generateOptimalSchedule(workers, availabilityMap) {
         } else {
             pool = workers.filter(w =>
                 !unavailable.includes(w) &&
-                shiftCount[w.id] < (w.monthly_shifts || 999)
+                shiftCount[w.id] < (w.shifts_left || 999)
             );
         }
 
@@ -169,7 +169,7 @@ function generateBalancedSchedule(workers, availabilityMap) {
     for (const day of daysOfWeek) {
         const available = workers.filter(w => {
             const status = availabilityMap[w.id]?.[day] || 0;
-            return status !== 3 && shiftCount[w.id] < (w.monthly_shifts || 999);
+            return status !== 3 && shiftCount[w.id] < (w.shifts_left || 999);
         });
 
         if (available.length === 0) {
@@ -201,12 +201,12 @@ function generateRandomSchedule(workers, availabilityMap) {
     for (const day of daysOfWeek) {
         const priority = workers.filter(w => {
             const status = availabilityMap[w.id]?.[day] || 0;
-            return status === 2 && shiftCount[w.id] < (w.monthly_shifts || 999);
+            return status === 2 && shiftCount[w.id] < (w.shifts_left || 999);
         });
 
         const selected = workers.filter(w => {
             const status = availabilityMap[w.id]?.[day] || 0;
-            return status === 1 && shiftCount[w.id] < (w.monthly_shifts || 999);
+            return status === 1 && shiftCount[w.id] < (w.shifts_left || 999);
         });
 
         const unavailable = workers.filter(w => {
@@ -223,7 +223,7 @@ function generateRandomSchedule(workers, availabilityMap) {
         } else {
             pool = workers.filter(w =>
                 !unavailable.includes(w) &&
-                shiftCount[w.id] < (w.monthly_shifts || 999)
+                shiftCount[w.id] < (w.shifts_left || 999)
             );
         }
 
