@@ -172,8 +172,9 @@ export default {
                 const result = await response.json()
 
                 if (result.success) {
-                    // Сохраняем статус в localStorage
-                    localStorage.setItem('weekSubmitted', 'true');
+                    const weekStart = this.getNextWeekStart();
+                    const weekKey = `weekSubmitted_${weekStart.toISOString().split('T')[0]}`;
+                    localStorage.setItem(weekKey, 'true');
                     this.isSubmitted = true;
                     alert('Данные сохранены');
                 } else {
