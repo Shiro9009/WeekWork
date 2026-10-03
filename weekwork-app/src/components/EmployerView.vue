@@ -227,7 +227,7 @@ export default {
         }
     },
     methods: {
-        penShiftEditor(worker) {
+        openShiftEditor(worker) {
             this.editingWorker = worker;
             this.editingShifts = worker.shift_limit || 0;
             this.showShiftEditor = true;
@@ -239,8 +239,11 @@ export default {
         async saveShiftChanges() {
             if (!this.editingWorker) return;
 
-            const originalShifts = this.editingWorker.monthly_shifts;
-            this.editingWorker.monthly_shifts = this.editingShifts;
+            const originalLimit = this.editingWorker.shift_limit;
+            const originalLeft = this.editingWorker.shifts_left;
+
+            this.editingWorker.shift_limit = this.editingShifts;
+            this.editingWorker.shifts_left = this.editingShifts;
 
             try {
                 const response = await fetch(`${API_URL}/api/update-shifts`, {
@@ -259,11 +262,13 @@ export default {
                 if (data.success) {
                     this.closeShiftEditor();
                 } else {
-                    this.editingWorker.monthly_shifts = originalShifts;
+                    this.editingWorker.shift_limit = originalLimit;
+                    this.editingWorker.shifts_left = originalLeft;
                     alert('Ошибка: ' + data.error);
                 }
             } catch (error) {
-                this.editingWorker.monthly_shifts = originalShifts;
+                this.editingWorker.shift_limit = originalLimit;
+                this.editingWorker.shifts_left = originalLeft;
                 console.error('Ошибка:', error);
                 alert('Не удалось сохранить');
             }
