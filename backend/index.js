@@ -13,6 +13,18 @@ export const supabase = createClient(
     process.env.SUPABASE_KEY
 );
 
+async function keepAlive() {
+    const { error } = await supabase
+        .from('keep_alive')
+        .insert({ created_at: new Date().toISOString() });
+
+    if (error) {
+        console.error('Ошибка keep-alive:', error);
+    } else {
+        console.log('Keep-alive: запись добавлена');
+    }
+}
+
 const app = express();
 
 app.use(cors());
@@ -25,7 +37,9 @@ const PORT = 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Бэкенд запущен на http://0.0.0.0:${PORT}`);
 
-    cleanupOldWeeks();
+    keepAlive();
+    setInterval(keepAlive, 24 * 60 * 60 * 1000);
 
+    cleanupOldWeeks();
     setInterval(cleanupOldWeeks, 24 * 60 * 60 * 1000);
 });
