@@ -3,12 +3,15 @@ import { supabase } from "./index.js";
 import { getNextWeekStart, generationSchedule } from "./scheduler.js";
 
 const router = express.Router();
+const DAY_KEYS = { Mo: "пн", Tu: "вт", We: "ср", Th: "чт", Fr: "пт", Sa: "сб", Su: "вс"};
 
 router.post('/api/availability', async (req, res) => {
     console.log('Запрос получен:', req.body);
 
     try {
         const { telegram_id, first_name, days, desc } = req.body;
+
+
 
         if (!telegram_id || !days) {
             console.log('Не хватает данных');
@@ -58,12 +61,20 @@ router.post('/api/availability', async (req, res) => {
         const weekStart = getNextWeekStart();
         console.log('Сохранение для недели:', weekStart);
 
+        const normalizedDays = {};
+        for (const [key, value] of Object.entries(days)) {
+            const normalizedKey = DAY_KEYS[key] || key;
+            normalizedDays[normalizedKey] = value;
+        }
+
+        console.log("Нормализованные дни", normalizedDays);
+
         const { error } = await supabase
             .from('weekly_availability')
             .upsert({
                 worker_id: user.id,
                 week_start: weekStart,
-                days: days,
+                days: normalizedDays,
                 description: desc || ''
             }, {
                 onConflict: 'worker_id, week_start'
