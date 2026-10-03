@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.get('/api/employer-data', async (req, res) => {
     const { telegram_id } = req.query;
+    
     if (!telegram_id) {
         return res.status(400).json({ error: 'Не указан telegram_id' });
     }
@@ -19,29 +20,36 @@ router.get('/api/employer-data', async (req, res) => {
     if (!employer) {
         return res.status(404).json({ error: 'Работодатель не найден' });
     }
+
     const { data: workers } = await supabase
         .from('users')
-        .select('id, name, telegram_id, monthly_shifts')
+        .select('id, name, telegram_id, shift_limit, shifts_left')
         .eq('employer_id', employer.id)
         .eq('role', 'worker');
+
     const weekStart = getNextWeekStart();
+
     const { data: availability } = await supabase
         .from('weekly_availability')
         .select('worker_id, days')
         .eq('week_start', weekStart);
+
     const { data: options } = await supabase
         .from('shift_options')
         .select('option_number, schedule')
         .eq('employer_id', employer.id)
         .eq('week_start', weekStart)
         .order('option_number', { ascending: true });
+
     const { data: finalSchedule } = await supabase
         .from('final_schedule')
         .select('schedule, employer_id')
         .eq('employer_id', employer.id)
         .eq('week_start', weekStart)
         .single();
+
     let final = null;
+
     if (finalSchedule) {
         final = finalSchedule.schedule;
     }
@@ -89,7 +97,7 @@ router.post('/api/choose-option', async (req, res) => {
     const schedule = option.schedule;
     const { data: workers } = await supabase
         .from('users')
-        .select('id, name, monthly_shifts')
+        .select('id, name, shifts_left')
         .eq('employer_id', employer.id)
         .eq('role', 'worker')
         .eq('is_on_leave', false);
@@ -101,10 +109,10 @@ router.post('/api/choose-option', async (req, res) => {
             }
         }
         if (count > 0) {
-            const newShifts = Math.max(0, (worker.monthly_shifts || 0) - count);
+            const newShifts = Math.max(0, (worker.shifts_left || 0) - count);
             await supabase
                 .from('users')
-                .update({ monthly_shifts: newShifts })
+                .update({ shifts_left: newShifts })
                 .eq('id', worker.id);
             console.log(`У работника ${worker.name} осталось ${newShifts} смен`);
         }
@@ -160,7 +168,10 @@ router.post('/api/update-shifts', async (req, res) => {
         }
         const { error: updateError } = await supabase
             .from('users')
-            .update({ monthly_shifts: monthly_shifts })
+            .update({
+                shift_limit: monthly_shifts,
+                shifts_left: monthly_shifts
+            })
             .eq('id', user_id);
         if (updateError) {
             console.log(`Ошибка обновления для ${user_id}:`, updateError);
@@ -231,7 +242,7 @@ router.post('/api/update-schedule', async (req, res) => {
 
     const { data: workers, error: workersError } = await supabase
         .from('users')
-        .select('id, name, telegram_id, monthly_shifts')
+        .select('id, name, telegram_id, shifts_left')
         .eq('employer_id', employer.id)
         .eq('role', 'worker');
     if (workersError || !workers) {
@@ -258,16 +269,16 @@ router.post('/api/update-schedule', async (req, res) => {
         const newCount = newDaysByWorker[worker.id].length;
         if (oldCount === newCount) continue;
 
-        const newShifts = Math.max(0, (worker.monthly_shifts || 0) + oldCount - newCount);
+        const newShifts = Math.max(0, (worker.shifts_left || 0) + oldCount - newCount);
         const { error: shiftError } = await supabase
             .from('users')
-            .update({ monthly_shifts: newShifts })
+            .update({ shifts_left: newShifts })
             .eq('id', worker.id);
         if (shiftError) {
             console.error(`Ошибка обновления смен для ${worker.name}:`, shiftError);
             continue;
         }
-        worker.monthly_shifts = newShifts;
+        worker.shifts_left = newShifts;
         shifts.push({ user_id: worker.id, monthly_shifts: newShifts });
         console.log(`У работника ${worker.name} осталось ${newShifts} смен`);
     }

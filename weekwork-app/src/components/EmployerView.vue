@@ -12,7 +12,7 @@
                         </div>
                         <p class="worker-name">{{ worker.name }}</p>
                         <p class="worker-shifts" @click="openShiftEditor(worker)">
-                            {{ worker.monthly_shifts || 0 }} см.
+                            {{ worker.shifts_left || 0 }} см.
                         </p>
                     </li>
                 </ul>
@@ -44,7 +44,8 @@
                 </div>
                 <button v-if="!isEditing" @click="startEditing" class="edit-schedule-btn">Изменить состав</button>
                 <div v-if="isEditing" class="final-actions">
-                    <p class="final-hint">{{ hasChanges ? 'Изменения ещё не сохранены' : 'Выберите работников на дни' }}</p>
+                    <p class="final-hint">{{ hasChanges ? 'Изменения ещё не сохранены' : 'Выберите работников на дни' }}
+                    </p>
                     <div class="final-actions-btns">
                         <button @click="saveSchedule" class="save-btn" :disabled="!hasChanges || saving">
                             {{ saving ? 'Сохраняем...' : 'Сохранить' }}
@@ -226,9 +227,9 @@ export default {
         }
     },
     methods: {
-        openShiftEditor(worker) {
+        penShiftEditor(worker) {
             this.editingWorker = worker;
-            this.editingShifts = worker.monthly_shifts || 0;
+            this.editingShifts = worker.shift_limit || 0;
             this.showShiftEditor = true;
         },
         closeShiftEditor() {
@@ -249,7 +250,7 @@ export default {
                         telegram_id: this.user.id,
                         workers: this.workers.map(w => ({
                             user_id: w.id,
-                            monthly_shifts: w.monthly_shifts || 0
+                            monthly_shifts: w.shift_limit || 0
                         }))
                     })
                 });
@@ -988,5 +989,4 @@ export default {
 .save-btn:not(:disabled):hover {
     background: #310597;
 }
-
 </style>
