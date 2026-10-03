@@ -43,13 +43,13 @@ router.get('/api/user-shifts', async (req, res) => {
     }
     const { data, error } = await supabase
         .from('users')
-        .select('monthly_shifts')
+        .select('shifts_left')
         .eq('telegram_id', telegram_id)
         .single();
     if (error || !data) {
         return res.status(404).json({ error: 'Пользователь не найден' });
     }
-    res.json({ monthly_shifts: data.monthly_shifts || 0 });
+    res.json({ monthly_shifts: data.shifts_left || 0 });
 });
 
 router.get('/api/user-avatar', async (req, res) => {
