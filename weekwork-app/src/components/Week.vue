@@ -88,7 +88,7 @@
 </template>
 
 <script>
-const API_URL = 'https://weekwork.onrender.com';
+import { API_URL } from '../config.js';
 
 export default {
     data() {

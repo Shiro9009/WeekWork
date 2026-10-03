@@ -29,8 +29,7 @@
 import Week from './components/Week.vue';
 import Top from './components/Top.vue';
 import EmployerView from './components/EmployerView.vue';
-
-const API_URL = 'https://weekwork.onrender.com';
+import { API_URL } from './config.js';
 
 export default {
   components: { Week, Top, EmployerView },
