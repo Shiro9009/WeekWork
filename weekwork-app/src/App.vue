@@ -3,6 +3,12 @@
     <div v-if="loading" class="loading">
       <img class="gif_loading" src="/loading-thinking.gif" alt="загрузка">
     </div>
+    <div v-else-if="userRole === 'not_registered'">
+      <div class="not-registered">
+        <p>Вы ещё не зарегистрированы.</p>
+        <p>Откройте бота @WeekWork_bot и нажмите /start</p>
+      </div>
+    </div>
     <div v-else>
       <router-view v-if="$route.path === '/profile'" :user="user" />
       <div v-else>
@@ -72,8 +78,9 @@ export default {
       this.user = userData;
       console.log('Пользователь загружен');
     } else {
-      console.log('Данных нет, показываем заглушку');
-
+      console.log('Данных нет — приложение вне Telegram');
+      this.loading = false;
+      return;
     }
 
     if (window.Telegram?.WebApp) {
@@ -85,15 +92,14 @@ export default {
       const response = await fetch(`${API_URL}/api/user-role?telegram_id=${this.user.id}`);
       if (response.ok) {
         const data = await response.json();
-        if (data.role === 'employer') {
-          this.userRole = 'employer';
-        } else {
-          this.userRole = 'worker';
-        }
+        this.userRole = data.role === 'employer' ? 'employer' : 'worker';
+      } else {
+        console.log('Пользователь не найден в БД');
+        this.userRole = 'not_registered';
       }
     } catch (e) {
       console.log('Ошибка получения роли:', e);
-      this.userRole = 'worker';
+      this.userRole = 'not_registered';
     }
 
     this.loading = false;
@@ -107,23 +113,6 @@ export default {
           role: this.userRole,
          }
       });
-    },
-    setRole(role) {
-      this.userRole = role;
-      if (role === 'employer') {
-        this.user = {
-          id: 943285019,
-          first_name: 'Shiro',
-          username: 'shiron999'
-        };
-      } else {
-        this.user = {
-          id: 8063928217,
-          first_name: 'Gowqee',
-          username: 'Gowqiiii'
-        };
-      }
-      this.loading = false;
     }
   }
 };
@@ -139,4 +128,14 @@ export default {
   width: 50px;
 }
 
+.not-registered {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 16px;
+  color: #6b7280;
+}
+
+.not-registered p {
+  margin: 8px 0;
+}
 </style>
