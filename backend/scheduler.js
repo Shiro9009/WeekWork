@@ -241,3 +241,48 @@ function generateRandomSchedule(workers, availabilityMap) {
 
     return schedule;
 }
+
+export async function cleanupOldWeeks() {
+    console.log('Запуск очистки старых недель');
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - 28);
+    const cutoff = cutoffDate.toISOString().split('T')[0];
+
+    console.log('Удаляем записи старше:', cutoff);
+
+    const { error: availError } = await supabase
+        .from('weekly_availability')
+        .delete()
+        .lt('week_start', cutoff);
+
+    if (availError) {
+        console.error('Ошибка очистки weekly_availability:', availError);
+    } else {
+        console.log('weekly_availability очищена');
+    }
+
+    const { error: optionsError } = await supabase
+        .from('shift_options')
+        .delete()
+        .lt('week_start', cutoff);
+
+    if (optionsError) {
+        console.error('Ошибка очистки shift_options:', optionsError);
+    } else {
+        console.log('shift_options очищена');
+    }
+
+    const { error: finalError } = await supabase
+        .from('final_schedule')
+        .delete()
+        .lt('week_start', cutoff);
+
+    if (finalError) {
+        console.error('Ошибка очистки final_schedule:', finalError);
+    } else {
+        console.log('final_schedule очищена');
+    }
+
+    console.log('Очистка завершена');
+}

@@ -5,6 +5,7 @@ import routes from './routes.js';
 import employerRoutes from './employerRoutes.js';
 import { bot, APP_URL } from './bot.js';
 import userRoutes from './userRoutes.js';
+import { cleanupOldWeeks } from './scheduler.js';
 import './handlers.js';
 
 export const supabase = createClient(
@@ -23,4 +24,8 @@ app.use(userRoutes);
 const PORT = 3000;
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Бэкенд запущен на http://0.0.0.0:${PORT}`);
+
+    cleanupOldWeeks();
+
+    setInterval(cleanupOldWeeks, 24 * 60 * 60 * 1000);
 });
