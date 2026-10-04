@@ -172,9 +172,6 @@ export default {
                 const result = await response.json()
 
                 if (result.success) {
-                    const weekStart = this.getNextWeekStart();
-                    const weekKey = `weekSubmitted_${weekStart.toISOString().split('T')[0]}`;
-                    localStorage.setItem(weekKey, 'true');
                     this.isSubmitted = true;
                     alert('Данные сохранены');
                 } else {
@@ -185,14 +182,27 @@ export default {
                 alert('Не удалось отправить данные')
             }
         },
-        checkSubmittedStatus() {
+        async checkSubmittedStatus() {
+            if (!this.$parent.user || !this.$parent.user.id) return;
+
             const weekStart = this.getNextWeekStart();
-            const weekKey = `weekSubmitted_${weekStart.toISOString().split('T')[0]}`;
-            const status = localStorage.getItem(weekKey);
-            if (status === 'true') {
-                this.isSubmitted = true;
+            const weekStartStr = weekStart.toISOString().split('T')[0];
+
+            try {
+                const response = await fetch(
+                    `${API_URL}/api/user-availability?telegram_id=${this.$parent.user.id}&week_start=${weekStartStr}`
+                );
+                const data = await response.json();
+
+                if (data.hasAvailability) {
+                    this.isSubmitted = true;
+                } else {
+                    this.isSubmitted = false;
+                }
+            } catch (error) {
+                console.error('Ошибка проверки статуса:', error);
             }
-        }
+        },
     },
     async mounted() {
         this.updateWeekRange();
