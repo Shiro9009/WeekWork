@@ -73,6 +73,21 @@ bot.onText(/\/reset/, async (msg) => {
     await bot.sendMessage(chatId, 'Профиль сброшен');
 });
 
+bot.onText(/\/clearcache/, async (msg) => {
+    const chatId = msg.chat.id;
+    const telegramId = msg.from.id;
+
+    const resetUrl = `${APP_URL}?reset=1`;
+
+    await bot.sendMessage(chatId, 'Нажмите кнопку, чтобы очистить кеш и открыть приложение заново:', {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: 'Очистить кеш и открыть', web_app: { url: resetUrl } }]
+            ]
+        }
+    });
+});
+
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const telegramId = msg.from.id;

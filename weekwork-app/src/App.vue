@@ -42,6 +42,13 @@ export default {
     };
   },
   async mounted() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('reset') === '1') {
+      localStorage.clear();
+      console.log('localStorage очищен по параметру reset=1');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     this.isTelegramApp = !!(window.Telegram?.WebApp);
 
     console.log('Проверяем window.Telegram: ', window.Telegram);
@@ -107,10 +114,10 @@ export default {
     goToProfile() {
       this.$router.push({
         path: '/profile',
-        query: { 
+        query: {
           user: JSON.stringify(this.user),
           role: this.userRole,
-         }
+        }
       });
     }
   }
