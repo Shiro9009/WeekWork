@@ -118,11 +118,22 @@ router.post('/api/choose-option', async (req, res) => {
         }
     }
     const { data: workersForNotifications } = await supabase
-        .from('users')
-        .select('id, name, telegram_id')
-        .eq('employer_id', employer.id)
-        .eq('role', 'worker')
-        .eq('is_on_leave', false);
+    .from('users')
+    .select('id, name, telegram_id')
+    .eq('employer_id', employer.id)
+    .eq('role', 'worker')
+    .eq('is_on_leave', false);
+
+    const workerIds = workersForNotifications.map(w => w.id);
+    
+    await supabase
+        .from('weekly_availability')
+        .delete()
+        .eq('week_start', week_start)
+        .in('worker_id', workerIds);
+    
+    console.log('weekly_availability очищена для всех работников');
+    
     for (const worker of workersForNotifications) {
         if (!worker.telegram_id) continue;
         const workerDays = [];
@@ -137,6 +148,7 @@ router.post('/api/choose-option', async (req, res) => {
             console.log(`Уведомление отправлено ${worker.name} (${worker.telegram_id})`);
         }
     }
+    
     res.json({ success: true, message: 'Расписание выбрано!' });
 });
 
