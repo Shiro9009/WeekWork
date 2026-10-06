@@ -78,6 +78,52 @@ router.get('/api/user-availability', async (req, res) => {
     res.json({ hasAvailability: !!availability });
 });
 
+router.get('/api/user-status-full', async (req, res) => {
+    const { telegram_id, week_start } = req.query;
+    if (!telegram_id || !week_start) {
+        return res.status(400).json({ error: 'Не хватает данных' });
+    }
+
+    const { data: user } = await supabase
+        .from('users')
+        .select('id, name, employer_id')
+        .eq('telegram_id', telegram_id)
+        .single();
+
+    if (!user) {
+        return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    const { data: availability } = await supabase
+        .from('weekly_availability')
+        .select('id')
+        .eq('worker_id', user.id)
+        .eq('week_start', week_start)
+        .single();
+
+    const { data: finalSchedule } = await supabase
+        .from('final_schedule')
+        .select('schedule')
+        .eq('employer_id', user.employer_id)
+        .eq('week_start', week_start)
+        .single();
+
+    let myDays = [];
+    if (finalSchedule?.schedule) {
+        for (const [day, names] of Object.entries(finalSchedule.schedule)) {
+            if (Array.isArray(names) && names.includes(user.name)) {
+                myDays.push(day);
+            }
+        }
+    }
+
+    res.json({
+        hasAvailability: !!availability,
+        hasFinalSchedule: !!finalSchedule,
+        myDays: myDays
+    });
+});
+
 router.get('/api/user-avatar', async (req, res) => {
     const { telegram_id } = req.query;
 
@@ -112,6 +158,5 @@ router.get('/api/user-avatar', async (req, res) => {
         res.status(500).json({ error: 'Не удалось получить аватар' });
     }
 });
-
 
 export default router;

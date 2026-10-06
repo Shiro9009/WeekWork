@@ -8,7 +8,20 @@
             <div class="count">{{ shifts_done }}</div>
         </section>
 
-        <div v-if="isSubmitted" class="submitted-message">
+        <div v-if="hasFinalSchedule" class="final-view">
+            <p class="final-title">Ваши смены на неделю</p>
+            <p class="final-week">{{ weekRange }}</p>
+            <ul class="days-list">
+                <li v-for="day in myDays" :key="day" class="day-item">
+                    {{ getDayLabel(day) }}
+                </li>
+            </ul>
+            <p v-if="myDays.length === 0" class="final-empty">
+                На этой неделе у вас нет смен
+            </p>
+        </div>
+
+        <div v-else-if="isSubmitted" class="submitted-message">
             <p class="submitted-title">Данные отправлены</p>
             <p class="submitted-text">Скоро ваш работодатель выберет расписание.</p>
         </div>
@@ -94,18 +107,14 @@ export default {
     data() {
         return {
             days: {
-                Mo: 0,
-                Tu: 0,
-                We: 0,
-                Th: 0,
-                Fr: 0,
-                Sa: 0,
-                Su: 0,
+                Mo: 0, Tu: 0, We: 0, Th: 0, Fr: 0, Sa: 0, Su: 0,
             },
             desc: '',
             shifts_done: 0,
             weekRange: '',
             isSubmitted: false,
+            hasFinalSchedule: false,
+            myDays: [],
         }
     },
     methods: {
@@ -126,25 +135,32 @@ export default {
             const weekStart = this.getNextWeekStart();
             const weekEnd = new Date(weekStart);
             weekEnd.setDate(weekEnd.getDate() + 6);
-
             const startStr = this.formatDate(weekStart);
             const endStr = this.formatDate(weekEnd);
-
             this.weekRange = `Неделя ${startStr}–${endStr}`;
+        },
+        getDayLabel(dayKey) {
+            const dayMap = {
+                'пн': 'Понедельник',
+                'вт': 'Вторник',
+                'ср': 'Среда',
+                'чт': 'Четверг',
+                'пт': 'Пятница',
+                'сб': 'Суббота',
+                'вс': 'Воскресенье'
+            };
+            return dayMap[dayKey] || dayKey;
         },
         selector(day) {
             const current = this.days[day];
             const next = (current + 1) % 4;
-
             if (next === 2) {
                 const priorityCount = Object.values(this.days).filter(v => v === 2).length;
-
                 if (priorityCount >= 4) {
                     alert('Нельзя поставить больше 4 приоритетных дней. Выберите другие дни как обычные.');
                     return;
                 }
             }
-
             this.days[day] = next;
         },
         async sendData() {
@@ -152,25 +168,19 @@ export default {
                 alert('Пользователь не авторизован')
                 return
             }
-
             const payload = {
                 telegram_id: this.$parent.user.id,
                 first_name: this.$parent.user.first_name || 'Пользователь',
                 days: this.days,
                 desc: this.desc,
             }
-
             try {
                 const response = await fetch(`${API_URL}/api/availability`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 })
-
                 const result = await response.json()
-
                 if (result.success) {
                     this.isSubmitted = true;
                     alert('Данные сохранены');
@@ -190,15 +200,13 @@ export default {
 
             try {
                 const response = await fetch(
-                    `${API_URL}/api/user-availability?telegram_id=${this.$parent.user.id}&week_start=${weekStartStr}`
+                    `${API_URL}/api/user-status-full?telegram_id=${this.$parent.user.id}&week_start=${weekStartStr}`
                 );
                 const data = await response.json();
 
-                if (data.hasAvailability) {
-                    this.isSubmitted = true;
-                } else {
-                    this.isSubmitted = false;
-                }
+                this.isSubmitted = data.hasAvailability;
+                this.hasFinalSchedule = data.hasFinalSchedule;
+                this.myDays = data.myDays || [];
             } catch (error) {
                 console.error('Ошибка проверки статуса:', error);
             }
@@ -270,6 +278,63 @@ export default {
     font-weight: 600;
 }
 
+.final-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 30px auto;
+    padding: 30px 20px;
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #e5e7eb;
+    width: 358px;
+    min-height: 200px;
+    box-sizing: border-box;
+}
+
+.final-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 6px;
+    text-align: center;
+}
+
+.final-week {
+    font-size: 14px;
+    color: #7C6BC4;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.days-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.day-item {
+    background: #f3f0fc;
+    color: #7C6BC4;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    border: 1px solid #9B8FD8;
+}
+
+.final-empty {
+    font-size: 16px;
+    color: #6b7280;
+    text-align: center;
+}
+
 .submitted-message {
     display: flex;
     flex-direction: column;
@@ -282,12 +347,7 @@ export default {
     border: 1px solid #e5e7eb;
     width: 358px;
     min-height: 200px;
-}
-
-.check-icon {
-    width: 60px;
-    height: 60px;
-    margin-bottom: 16px;
+    box-sizing: border-box;
 }
 
 .submitted-title {
@@ -357,6 +417,7 @@ button:active {
     height: 100px;
     box-shadow: 0 2px 10px 0 rgba(0, 0, 0, 0.05);
     background: #fff;
+    box-sizing: border-box;
 }
 
 .Descriprion::placeholder {
@@ -461,24 +522,138 @@ button {
 }
 
 @media (max-width: 375px) {
+    .shifts {
+        width: calc(100% - 32px);
+        max-width: 358px;
+        box-sizing: border-box;
+        padding: 12px;
+        height: auto;
+        min-height: 30px;
+    }
+
+    .icon-img-container {
+        width: 16px;
+        height: 16px;
+        padding: 6px;
+    }
+
+    .icon-text {
+        min-width: 0;
+    }
+
+    .text {
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .count {
+        font-size: 16px;
+        padding: 3px 8px;
+        min-width: 28px;
+        text-align: center;
+    }
+
+    .final-view,
+    .submitted-message {
+        width: calc(100% - 32px);
+        max-width: 358px;
+        box-sizing: border-box;
+    }
+
     ul {
         display: flex;
         justify-content: center;
         gap: 3px;
         margin-top: 50px;
+        width: calc(100% - 16px);
+        max-width: 390px;
+        padding: 0 8px;
+        box-sizing: border-box;
     }
 
     li {
         list-style: none;
         background-color: #fff;
-        padding: 8px;
+        padding: 8px 0;
         border-radius: 10px;
-        border: 2px solid rgb(146, 98, 190);
-        width: 30px;
-        color: rgb(146, 98, 190);
+        border: 1px solid #e5e7eb;
+        flex: 1;
+        min-width: 0;
+        color: #6b7280;
         transition: transform 200ms;
         text-align: center;
         cursor: pointer;
+    }
+
+    li.selected {
+        background-color: #9b8fd8;
+        color: #fff;
+        border-color: #9b8fd8;
+    }
+
+    li.priority {
+        background-color: #fff;
+        color: #9b8fd8;
+        border: 2px solid #9b8fd8;
+    }
+
+    li.unavailable {
+        background-color: #fff;
+        color: #9c5a6c;
+        border: 1px solid #9c5a6c;
+    }
+
+    .title-container {
+        width: calc(100% - 32px);
+        max-width: 390px;
+        padding: 0 8px;
+        box-sizing: border-box;
+    }
+
+    .text-shifts,
+    .text-week {
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    .description-container {
+        width: calc(100% - 32px);
+        max-width: 390px;
+        padding: 0 8px;
+        box-sizing: border-box;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .def,
+    .sel,
+    .pri,
+    .una {
+        font-size: 11px;
+    }
+
+    .nuances-title {
+        width: calc(100% - 32px);
+        max-width: 390px;
+        padding: 0 8px;
+        box-sizing: border-box;
+        font-size: 16px;
+    }
+
+    .Descriprion {
+        width: calc(100% - 32px);
+        max-width: 358px;
+        box-sizing: border-box;
+    }
+
+    button {
+        width: calc(100% - 32px);
+        max-width: 358px;
+        box-sizing: border-box;
+        font-size: 18px;
     }
 }
 </style>
