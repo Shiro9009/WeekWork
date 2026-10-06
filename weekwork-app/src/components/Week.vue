@@ -11,11 +11,11 @@
         <div v-if="hasFinalSchedule" class="final-view">
             <p class="final-title">Ваши смены на неделю</p>
             <p class="final-week">{{ weekRange }}</p>
-            <ul class="days-list">
-                <li v-for="day in myDays" :key="day" class="day-item">
-                    {{ getDayLabel(day) }}
-                </li>
-            </ul>
+            <div class="days-grid">
+                <div v-for="day in myDays" :key="day" class="day-circle" :title="getDayLabel(day)">
+                    {{ getDayShort(day) }}
+                </div>
+            </div>
             <p v-if="myDays.length === 0" class="final-empty">
                 На этой неделе у вас нет смен
             </p>
@@ -148,6 +148,18 @@ export default {
                 'пт': 'Пятница',
                 'сб': 'Суббота',
                 'вс': 'Воскресенье'
+            };
+            return dayMap[dayKey] || dayKey;
+        },
+        getDayShort(dayKey) {
+            const dayMap = {
+                'пн': 'Пн',
+                'вт': 'Вт',
+                'ср': 'Ср',
+                'чт': 'Чт',
+                'пт': 'Пт',
+                'сб': 'Сб',
+                'вс': 'Вс'
             };
             return dayMap[dayKey] || dayKey;
         },
@@ -305,25 +317,35 @@ export default {
     text-align: center;
 }
 
-.days-list {
+.days-grid {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
     width: 100%;
-    padding: 0;
-    margin: 0;
-    list-style: none;
+    margin-top: 10px;
 }
 
-.day-item {
-    background: #f3f0fc;
-    color: #7C6BC4;
-    padding: 12px 16px;
-    border-radius: 12px;
+.day-circle {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #7c6bc4;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 16px;
     font-weight: 600;
-    text-align: center;
-    border: 1px solid #9B8FD8;
+    box-shadow: 0 2px 8px rgba(124, 107, 196, 0.3);
+    border: 2px solid #fff;
+    transition: transform 0.2s ease;
+    cursor: default;
+}
+
+.day-circle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(124, 107, 196, 0.4);
 }
 
 .final-empty {
@@ -557,6 +579,12 @@ button {
         width: calc(100% - 32px);
         max-width: 358px;
         box-sizing: border-box;
+    }
+
+    .day-circle {
+        width: 48px;
+        height: 48px;
+        font-size: 14px;
     }
 
     ul {

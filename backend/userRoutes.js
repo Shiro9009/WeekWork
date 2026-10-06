@@ -111,6 +111,8 @@ router.get('/api/user-status-full', async (req, res) => {
         .eq('week_start', week_start)
         .single();
 
+    const DAY_ORDER = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+
     let myDays = [];
     if (finalSchedule?.schedule) {
         for (const [day, names] of Object.entries(finalSchedule.schedule)) {
@@ -118,6 +120,7 @@ router.get('/api/user-status-full', async (req, res) => {
                 myDays.push(day);
             }
         }
+        myDays.sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b));
     }
 
     res.json({
