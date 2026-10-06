@@ -1,6 +1,7 @@
 import express from "express";
 import { supabase } from "./index.js";
 import { bot } from './bot.js';
+import { getNextWeekStart } from './scheduler.js';
 
 const router = express.Router();
 
@@ -79,10 +80,12 @@ router.get('/api/user-availability', async (req, res) => {
 });
 
 router.get('/api/user-status-full', async (req, res) => {
-    const { telegram_id, week_start } = req.query;
-    if (!telegram_id || !week_start) {
+    const { telegram_id } = req.query;
+    if (!telegram_id) {
         return res.status(400).json({ error: 'Не хватает данных' });
     }
+
+    const week_start = getNextWeekStart();
 
     const { data: user } = await supabase
         .from('users')

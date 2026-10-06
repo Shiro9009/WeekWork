@@ -195,12 +195,9 @@ export default {
         async checkSubmittedStatus() {
             if (!this.$parent.user || !this.$parent.user.id) return;
 
-            const weekStart = this.getNextWeekStart();
-            const weekStartStr = weekStart.toISOString().split('T')[0];
-
             try {
                 const response = await fetch(
-                    `${API_URL}/api/user-status-full?telegram_id=${this.$parent.user.id}&week_start=${weekStartStr}`
+                    `${API_URL}/api/user-status-full?telegram_id=${this.$parent.user.id}`
                 );
                 const data = await response.json();
 
