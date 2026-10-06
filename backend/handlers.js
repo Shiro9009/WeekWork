@@ -93,10 +93,10 @@ bot.on('message', async (msg) => {
     const telegramId = msg.from.id;
     const text = msg.text;
 
-    if (text === '/start' || text === '/reset') {
+    if (text === '/start' || text === '/reset' || text === '/clearcache') {
         return;
     }
-
+    
     if (msg.contact) {
         const phoneNumber = cleanPhoneNumber(msg.contact.phone_number);
         console.log('Номер пользователя:', phoneNumber);
