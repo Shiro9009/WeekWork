@@ -11,8 +11,8 @@
                             {{ worker.name.charAt(0).toUpperCase() }}
                         </div>
                         <p class="worker-name">{{ worker.name }}</p>
-                        <p class="worker-shifts" @click="openShiftEditor(worker)">
-                            {{ worker.shifts_left || 0 }} см.
+                        <p class="worker-shifts">
+                            {{ worker.shifts_done || 0 }} см.
                         </p>
                     </li>
                 </ul>
@@ -80,19 +80,6 @@
                     </div>
                 </div>
             </div>
-
-            <div v-if="showShiftEditor" class="modal-overlay" @click.self="closeShiftEditor">
-                <div class="modal-content">
-                    <h3 class="modal-title">Изменить смены</h3>
-                    <p class="modal-worker-name">{{ editingWorker?.name }}</p>
-                    <input type="number" v-model.number="editingShifts" min="0" class="modal-input"
-                        @keyup.enter="saveShiftChanges" autofocus />
-                    <div class="modal-buttons">
-                        <button @click="saveShiftChanges" class="modal-save-btn">Сохранить</button>
-                        <button @click="closeShiftEditor" class="modal-cancel-btn">Отмена</button>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </template>
@@ -112,9 +99,6 @@ export default {
             hasChanges: false,
             saving: false,
             isEditing: false,
-            showShiftEditor: false,
-            editingWorker: null,
-            editingShifts: 0,
         };
     },
     props: {
@@ -227,52 +211,6 @@ export default {
         }
     },
     methods: {
-        openShiftEditor(worker) {
-            this.editingWorker = worker;
-            this.editingShifts = worker.shift_limit || 0;
-            this.showShiftEditor = true;
-        },
-        closeShiftEditor() {
-            this.showShiftEditor = false;
-            this.editingWorker = null;
-        },
-        async saveShiftChanges() {
-            if (!this.editingWorker) return;
-
-            const originalLimit = this.editingWorker.shift_limit;
-            const originalLeft = this.editingWorker.shifts_left;
-
-            this.editingWorker.shift_limit = this.editingShifts;
-            this.editingWorker.shifts_left = this.editingShifts;
-
-            try {
-                const response = await fetch(`${API_URL}/api/update-shifts`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        telegram_id: this.user.id,
-                        workers: this.workers.map(w => ({
-                            user_id: w.id,
-                            monthly_shifts: w.shift_limit || 0
-                        }))
-                    })
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    this.closeShiftEditor();
-                } else {
-                    this.editingWorker.shift_limit = originalLimit;
-                    this.editingWorker.shifts_left = originalLeft;
-                    alert('Ошибка: ' + data.error);
-                }
-            } catch (error) {
-                this.editingWorker.shift_limit = originalLimit;
-                this.editingWorker.shifts_left = originalLeft;
-                console.error('Ошибка:', error);
-                alert('Не удалось сохранить');
-            }
-        },
         getWorkersForDay(schedule, dayShort) {
             if (!schedule) return [];
 
@@ -456,7 +394,7 @@ export default {
                     if (Array.isArray(data.shifts)) {
                         for (const shift of data.shifts) {
                             const worker = this.workers.find(w => w.id === shift.user_id);
-                            if (worker) worker.monthly_shifts = shift.monthly_shifts;
+                            if (worker) worker.shifts_done = shift.shifts_done;
                         }
                     }
                     this.originalFinal = JSON.parse(JSON.stringify(this.final));
@@ -712,123 +650,6 @@ export default {
 
 .select-option-btn:active {
     transform: translateY(0);
-}
-
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
-}
-
-.modal-content {
-    background: white;
-    border-radius: 24px;
-    padding: 30px;
-    width: 320px;
-    max-width: 90%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    animation: modalFadeIn 0.3s ease;
-}
-
-@keyframes modalFadeIn {
-    from {
-        transform: scale(0.9);
-        opacity: 0;
-    }
-
-    to {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-.modal-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #111827;
-    margin: 0 0 8px 0;
-    text-align: center;
-}
-
-.modal-worker-name {
-    font-size: 16px;
-    color: #6b7280;
-    margin: 0 0 16px 0;
-    text-align: center;
-}
-
-.modal-input {
-    width: 100%;
-    padding: 12px 16px;
-    font-size: 20px;
-    font-weight: 600;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    text-align: center;
-    outline: none;
-    transition: border-color 0.3s ease;
-    box-sizing: border-box;
-}
-
-.modal-input:focus {
-    border-color: #7C6BC4;
-}
-
-.modal-buttons {
-    display: flex;
-    gap: 10px;
-    margin-top: 16px;
-}
-
-.modal-save-btn {
-    flex: 1;
-    padding: 12px;
-    background: #7C6BC4;
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.3s ease;
-}
-
-.modal-save-btn:hover {
-    background: #6a5ab8;
-}
-
-.modal-cancel-btn {
-    flex: 1;
-    padding: 12px;
-    background: #f3f4f6;
-    color: #6b7280;
-    border: none;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.3s ease;
-}
-
-.modal-cancel-btn:hover {
-    background: #e5e7eb;
-}
-
-.worker-shifts {
-    cursor: pointer;
-    transition: background 0.2s ease;
-}
-
-.worker-shifts:hover {
-    background: #e5e7eb;
 }
 
 .final-schedule {

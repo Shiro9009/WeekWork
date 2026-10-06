@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/api/employer-data', async (req, res) => {
     const { telegram_id } = req.query;
-    
+
     if (!telegram_id) {
         return res.status(400).json({ error: 'Не указан telegram_id' });
     }
@@ -23,7 +23,7 @@ router.get('/api/employer-data', async (req, res) => {
 
     const { data: workers } = await supabase
         .from('users')
-        .select('id, name, telegram_id, shift_limit, shifts_left')
+        .select('id, name, telegram_id, shifts_done')
         .eq('employer_id', employer.id)
         .eq('role', 'worker');
 
@@ -97,7 +97,7 @@ router.post('/api/choose-option', async (req, res) => {
     const schedule = option.schedule;
     const { data: workers } = await supabase
         .from('users')
-        .select('id, name, shifts_left')
+        .select('id, name, shifts_done')
         .eq('employer_id', employer.id)
         .eq('role', 'worker')
         .eq('is_on_leave', false);
@@ -109,31 +109,31 @@ router.post('/api/choose-option', async (req, res) => {
             }
         }
         if (count > 0) {
-            const newShifts = Math.max(0, (worker.shifts_left || 0) - count);
+            const newDone = (worker.shifts_done || 0) + count;
             await supabase
                 .from('users')
-                .update({ shifts_left: newShifts })
+                .update({ shifts_done: newDone })
                 .eq('id', worker.id);
-            console.log(`У работника ${worker.name} осталось ${newShifts} смен`);
+            console.log(`У работника ${worker.name} отработано ${newDone} смен`);
         }
     }
     const { data: workersForNotifications } = await supabase
-    .from('users')
-    .select('id, name, telegram_id')
-    .eq('employer_id', employer.id)
-    .eq('role', 'worker')
-    .eq('is_on_leave', false);
+        .from('users')
+        .select('id, name, telegram_id')
+        .eq('employer_id', employer.id)
+        .eq('role', 'worker')
+        .eq('is_on_leave', false);
 
     const workerIds = workersForNotifications.map(w => w.id);
-    
+
     await supabase
         .from('weekly_availability')
         .delete()
         .eq('week_start', week_start)
         .in('worker_id', workerIds);
-    
+
     console.log('weekly_availability очищена для всех работников');
-    
+
     for (const worker of workersForNotifications) {
         if (!worker.telegram_id) continue;
         const workerDays = [];
@@ -148,55 +148,8 @@ router.post('/api/choose-option', async (req, res) => {
             console.log(`Уведомление отправлено ${worker.name} (${worker.telegram_id})`);
         }
     }
-    
-    res.json({ success: true, message: 'Расписание выбрано!' });
-});
 
-router.post('/api/update-shifts', async (req, res) => {
-    const { telegram_id, workers } = req.body;
-    if (!telegram_id || !workers || !Array.isArray(workers)) {
-        return res.status(400).json({ error: 'Не хватает данных' });
-    }
-    const { data: employer } = await supabase
-        .from('users')
-        .select('id')
-        .eq('telegram_id', telegram_id)
-        .eq('role', 'employer')
-        .single();
-    if (!employer) {
-        return res.status(400).json({ error: 'Работодатель не найден' });
-    }
-    const updates = workers.map(async (worker) => {
-        const { user_id, monthly_shifts } = worker;
-        const { data: user } = await supabase
-            .from('users')
-            .select('id')
-            .eq('id', user_id)
-            .eq('employer_id', employer.id)
-            .single();
-        if (!user) {
-            console.log(`Пользователь ${user_id} не принадлежит этому работодателю`);
-            return null;
-        }
-        const { error: updateError } = await supabase
-            .from('users')
-            .update({
-                shift_limit: monthly_shifts,
-                shifts_left: monthly_shifts
-            })
-            .eq('id', user_id);
-        if (updateError) {
-            console.log(`Ошибка обновления для ${user_id}:`, updateError);
-            return null;
-        }
-        return { user_id, monthly_shifts };
-    });
-    const results = await Promise.all(updates);
-    const failed = results.filter(r => r === null);
-    if (failed.length > 0) {
-        return res.status(500).json({ error: 'Некоторые обновления не удались' });
-    }
-    res.json({ success: true, message: 'Количество смен обновлено' });
+    res.json({ success: true, message: 'Расписание выбрано!' });
 });
 
 const DAY_ORDER = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
@@ -254,7 +207,7 @@ router.post('/api/update-schedule', async (req, res) => {
 
     const { data: workers, error: workersError } = await supabase
         .from('users')
-        .select('id, name, telegram_id, shifts_left')
+        .select('id, name, telegram_id, shifts_done')
         .eq('employer_id', employer.id)
         .eq('role', 'worker');
     if (workersError || !workers) {
@@ -281,18 +234,18 @@ router.post('/api/update-schedule', async (req, res) => {
         const newCount = newDaysByWorker[worker.id].length;
         if (oldCount === newCount) continue;
 
-        const newShifts = Math.max(0, (worker.shifts_left || 0) + oldCount - newCount);
+        const newDone = Math.max(0, (worker.shifts_done || 0) - oldCount + newCount);
         const { error: shiftError } = await supabase
             .from('users')
-            .update({ shifts_left: newShifts })
+            .update({ shifts_done: newDone })
             .eq('id', worker.id);
         if (shiftError) {
             console.error(`Ошибка обновления смен для ${worker.name}:`, shiftError);
             continue;
         }
-        worker.shifts_left = newShifts;
-        shifts.push({ user_id: worker.id, monthly_shifts: newShifts });
-        console.log(`У работника ${worker.name} осталось ${newShifts} смен`);
+        worker.shifts_done = newDone;
+        shifts.push({ user_id: worker.id, shifts_done: newDone });
+        console.log(`У работника ${worker.name} отработано ${newDone} смен`);
     }
 
     const notified = [];
@@ -332,7 +285,7 @@ router.get('/api/user-role', async (req, res) => {
         return res.sendStatus(200);
     }
 
-    const { telegram_id } = req.query;  
+    const { telegram_id } = req.query;
 
     if (!telegram_id) {
         return res.status(400).json({ error: 'Не указан telegram_id' });

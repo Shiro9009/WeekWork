@@ -3,9 +3,9 @@
         <section class="shifts">
             <div class="icon-text">
                 <img class="icon-img-container" src="/calendar.svg" alt="">
-                <p class="text">Смен в этом месяце</p>
+                <p class="text">Отработано в этом месяце</p>
             </div>
-            <div class="count">{{ monthly_shifts }}</div>
+            <div class="count">{{ shifts_done }}</div>
         </section>
 
         <div v-if="isSubmitted" class="submitted-message">
@@ -103,7 +103,7 @@ export default {
                 Su: 0,
             },
             desc: '',
-            monthly_shifts: 0,
+            shifts_done: 0,
             weekRange: '',
             isSubmitted: false,
         }
@@ -206,14 +206,14 @@ export default {
     },
     async mounted() {
         this.updateWeekRange();
-        this.checkSubmittedStatus();
+        await this.checkSubmittedStatus();
 
         if (this.$parent.user && this.$parent.user.id) {
             try {
                 const response = await fetch(`${API_URL}/api/user-shifts?telegram_id=${this.$parent.user.id}`);
                 const data = await response.json();
                 if (data.monthly_shifts !== undefined) {
-                    this.monthly_shifts = data.monthly_shifts;
+                    this.shifts_done = data.monthly_shifts;
                 }
             } catch (error) {
                 console.error('Ошибка загрузки смен: ', error);

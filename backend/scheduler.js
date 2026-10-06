@@ -18,6 +18,18 @@ export function cleanPhoneNumber(phone) {
 export async function generationSchedule(employerId, weekStart) {
     console.log('Генерация расписания вызвана для:', employerId, weekStart);
 
+    const { data: existingOptions } = await supabase
+        .from('shift_options')
+        .select('id')
+        .eq('employer_id', employerId)
+        .eq('week_start', weekStart)
+        .limit(1);
+
+    if (existingOptions && existingOptions.length > 0) {
+        console.log('Варианты уже сгенерированы, повторная генерация пропущена');
+        return;
+    }
+
     const { error: deleteError } = await supabase
         .from('shift_options')
         .delete()
@@ -31,7 +43,7 @@ export async function generationSchedule(employerId, weekStart) {
 
     const { data: workers, error: workersError } = await supabase
         .from('users')
-        .select('id, name, shifts_left')
+        .select('id, name')
         .eq('employer_id', employerId)
         .eq('role', 'worker')
         .eq('is_on_leave', false);
@@ -113,18 +125,16 @@ function generateSchedule(workers, availabilityMap, optionNumber) {
 function generateOptimalSchedule(workers, availabilityMap) {
     const daysOfWeek = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
     const schedule = {};
-    const shiftCount = {};
-    workers.forEach(w => shiftCount[w.id] = 0);
 
     for (const day of daysOfWeek) {
         const priority = workers.filter(w => {
             const status = availabilityMap[w.id]?.[day] || 0;
-            return status === 2 && shiftCount[w.id] < (w.shifts_left || 999);
+            return status === 2;
         });
 
         const selected = workers.filter(w => {
             const status = availabilityMap[w.id]?.[day] || 0;
-            return status === 1 && shiftCount[w.id] < (w.shifts_left || 999);
+            return status === 1;
         });
 
         const unavailable = workers.filter(w => {
@@ -139,10 +149,7 @@ function generateOptimalSchedule(workers, availabilityMap) {
         } else if (selected.length > 0) {
             pool = selected;
         } else {
-            pool = workers.filter(w =>
-                !unavailable.includes(w) &&
-                shiftCount[w.id] < (w.shifts_left || 999)
-            );
+            pool = workers.filter(w => !unavailable.includes(w));
         }
 
         if (pool.length === 0) {
@@ -154,7 +161,6 @@ function generateOptimalSchedule(workers, availabilityMap) {
         const assigned = shuffled.slice(0, 1);
 
         schedule[day] = assigned.map(w => w.name);
-        assigned.forEach(w => shiftCount[w.id]++);
     }
 
     return schedule;
@@ -169,7 +175,7 @@ function generateBalancedSchedule(workers, availabilityMap) {
     for (const day of daysOfWeek) {
         const available = workers.filter(w => {
             const status = availabilityMap[w.id]?.[day] || 0;
-            return status !== 3 && shiftCount[w.id] < (w.shifts_left || 999);
+            return status !== 3;
         });
 
         if (available.length === 0) {
@@ -192,21 +198,37 @@ function generateBalancedSchedule(workers, availabilityMap) {
     return schedule;
 }
 
+export async function resetMonthlyShifts() {
+    const today = new Date();
+    if (today.getDate() !== 1) return;
+
+    console.log('Обнуление shifts_done для всех работников');
+
+    const { error } = await supabase
+        .from('users')
+        .update({ shifts_done: 0 })
+        .eq('role', 'worker');
+
+    if (error) {
+        console.error('Ошибка обнуления:', error);
+    } else {
+        console.log('shifts_done обнулён у всех работников');
+    }
+}
+
 function generateRandomSchedule(workers, availabilityMap) {
     const daysOfWeek = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
     const schedule = {};
-    const shiftCount = {};
-    workers.forEach(w => shiftCount[w.id] = 0);
 
     for (const day of daysOfWeek) {
         const priority = workers.filter(w => {
             const status = availabilityMap[w.id]?.[day] || 0;
-            return status === 2 && shiftCount[w.id] < (w.shifts_left || 999);
+            return status === 2;
         });
 
         const selected = workers.filter(w => {
             const status = availabilityMap[w.id]?.[day] || 0;
-            return status === 1 && shiftCount[w.id] < (w.shifts_left || 999);
+            return status === 1;
         });
 
         const unavailable = workers.filter(w => {
@@ -221,10 +243,7 @@ function generateRandomSchedule(workers, availabilityMap) {
         } else if (selected.length > 0) {
             pool = selected;
         } else {
-            pool = workers.filter(w =>
-                !unavailable.includes(w) &&
-                shiftCount[w.id] < (w.shifts_left || 999)
-            );
+            pool = workers.filter(w => !unavailable.includes(w));
         }
 
         if (pool.length === 0) {
@@ -236,53 +255,7 @@ function generateRandomSchedule(workers, availabilityMap) {
         const assigned = shuffled.slice(0, 1);
 
         schedule[day] = assigned.map(w => w.name);
-        assigned.forEach(w => shiftCount[w.id]++);
     }
 
     return schedule;
-}
-
-export async function cleanupOldWeeks() {
-    console.log('Запуск очистки старых недель');
-
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - 28);
-    const cutoff = cutoffDate.toISOString().split('T')[0];
-
-    console.log('Удаляем записи старше:', cutoff);
-
-    const { error: availError } = await supabase
-        .from('weekly_availability')
-        .delete()
-        .lt('week_start', cutoff);
-
-    if (availError) {
-        console.error('Ошибка очистки weekly_availability:', availError);
-    } else {
-        console.log('weekly_availability очищена');
-    }
-
-    const { error: optionsError } = await supabase
-        .from('shift_options')
-        .delete()
-        .lt('week_start', cutoff);
-
-    if (optionsError) {
-        console.error('Ошибка очистки shift_options:', optionsError);
-    } else {
-        console.log('shift_options очищена');
-    }
-
-    const { error: finalError } = await supabase
-        .from('final_schedule')
-        .delete()
-        .lt('week_start', cutoff);
-
-    if (finalError) {
-        console.error('Ошибка очистки final_schedule:', finalError);
-    } else {
-        console.log('final_schedule очищена');
-    }
-
-    console.log('Очистка завершена');
 }

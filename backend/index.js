@@ -5,7 +5,7 @@ import routes from './routes.js';
 import employerRoutes from './employerRoutes.js';
 import { bot, APP_URL } from './bot.js';
 import userRoutes from './userRoutes.js';
-import { cleanupOldWeeks } from './scheduler.js';
+import { cleanupOldWeeks, resetMonthlyShifts } from './scheduler.js';
 import './handlers.js';
 
 export const supabase = createClient(
@@ -42,4 +42,7 @@ app.listen(PORT, '0.0.0.0', () => {
 
     cleanupOldWeeks();
     setInterval(cleanupOldWeeks, 24 * 60 * 60 * 1000);
+
+    resetMonthlyShifts();
+    setInterval(resetMonthlyShifts, 24 * 60 * 60 * 1000);
 });
