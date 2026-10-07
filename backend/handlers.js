@@ -55,12 +55,20 @@ bot.onText(/\/reset/, async (msg) => {
     if (user.role === 'employer') {
         await supabase.from('shift_options').delete().eq('employer_id', user.id);
         await supabase.from('final_schedule').delete().eq('employer_id', user.id);
-    } else {
-        const { data: employer } = await supabase
+
+        await supabase
             .from('users')
-            .select('id')
-            .eq('telegram_id', telegramId)
-            .single();
+            .update({ employer_id: null })
+            .eq('employer_id', user.id);
+
+        console.log(`Все работники отвязаны от работодателя ${user.id}`);
+    } else if (user.role === 'worker') {
+        await supabase
+            .from('users')
+            .update({ shifts_done: 0 })
+            .eq('id', user.id);
+
+        console.log(`У работника ${user.id} обнулены смены`);
     }
 
     await supabase.from('user_sessions').delete().eq('user_id', telegramId);

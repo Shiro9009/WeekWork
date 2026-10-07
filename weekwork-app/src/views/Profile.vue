@@ -19,6 +19,17 @@
                 </div>
             </div>
         </section>
+        <section v-if="role === 'employer'" class="invite-code">
+            <div class="invite-code-item">
+                <h4 class="invite-code-title">Код для приглашения работника</h4>
+                <div class="invite-code-info">
+                    <p class="invite-code-value" @click="copyCode" title="Нажмите, чтобы скопировать">{{ inviteCode || '...' }}</p>
+                    <p class="invite-code-timer" v-if="expiresIn > 0">
+                        Действует ещё: {{ formatTime(expiresIn) }}
+                    </p>
+                </div>
+            </div>
+        </section>
         <section v-if="role === 'worker'" class="isOnLeave">
             <div class="isOnLeave-item">
                 <div class="left">
@@ -45,6 +56,9 @@ export default {
             loading: true,
             avatarUrl: null,
             employerUsername: null,
+            inviteCode: null,
+            expiresIn: 0,
+            codeTimer: null,
         }
     },
     computed: {
@@ -96,8 +110,55 @@ export default {
         } else {
             this.loading = false;
         }
+
+        if (this.role === 'employer') {
+            await this.loadInviteCode();
+        }
     },
     methods: {
+        async copyCode() {
+            if (!this.inviteCode) return;
+
+            try {
+                await navigator.clipboard.writeText(this.inviteCode);
+                alert('Код скопирован: ' + this.inviteCode);
+            } catch (error) {
+                console.error('Ошибка копирования:', error);
+                alert('Не удалось скопировать код');
+            }
+        },
+        async loadInviteCode() {
+            if (!this.user || !this.user.id) return;
+
+            try {
+                const response = await fetch(
+                    `${API_URL}/api/employer-code?telegram_id=${this.user.id}`
+                );
+                const data = await response.json();
+
+                if (data.code) {
+                    this.inviteCode = data.code;
+                    this.expiresIn = data.expiresIn;
+
+                    if (this.codeTimer) clearInterval(this.codeTimer);
+                    this.codeTimer = setInterval(() => {
+                        this.expiresIn--;
+                        if (this.expiresIn <= 0) {
+                            clearInterval(this.codeTimer);
+                            this.loadInviteCode();
+                        }
+                    }, 1000);
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки кода:', error);
+            }
+        },
+
+        formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        },
         goBack() {
             this.$router.go(-1);
         },
@@ -311,5 +372,47 @@ input:checked+label::after {
     left: calc(100% - 5px);
     transform: translateX(-100%);
     background-color: #fff;
+}
+
+.invite-code {
+    padding: 0 10px;
+}
+
+.invite-code-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 16px;
+    width: 358px;
+    background: #fff;
+    margin: 10px auto;
+    box-sizing: border-box;
+}
+
+.invite-code-title {
+    display: flex;
+    text-transform: uppercase;
+    font-weight: 700;
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 15px;
+}
+
+.invite-code-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.invite-code-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: #7c6bc4;
+    letter-spacing: 4px;
+}
+
+.invite-code-timer {
+    font-size: 14px;
+    color: #6b7280;
 }
 </style>

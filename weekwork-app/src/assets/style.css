@@ -10,6 +10,7 @@ body {
     height: 100vh;
     text-align: center;
     font-family: "Manrope", sans-serif;
+    touch-action: manipulation;
 }
 
 .gif_loading {
