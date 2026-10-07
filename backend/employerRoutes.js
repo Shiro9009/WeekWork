@@ -323,7 +323,7 @@ router.get('/api/employer-code', async (req, res) => {
 
     const code = generateInviteCode(employer.id);
 
-    const now = Math.floot(Date.now() / 1000);
+    const now = Math.floor(Date.now() / 1000);
     const windowStart = Math.floor(now / 1800) * 1800;  
     const windowEnd = windowStart + 1800;
     const expiresIn = windowEnd - now;
