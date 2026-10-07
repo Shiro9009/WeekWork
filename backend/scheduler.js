@@ -1,5 +1,6 @@
 import { supabase } from "./index.js";
 import { bot } from "./bot.js";
+import crypto from "crypto"
 
 export function getNextWeekStart(date = new Date()) {
     const d = new Date(date);
@@ -305,4 +306,16 @@ export async function cleanupOldWeeks() {
     }
 
     console.log('Очистка завершена');
+}
+
+export function generateInviteCode(employerId) {
+    const now = Date.now();
+    const seconds = Math.floor(now / 1000);
+    const window = Math.floor(seconds / 1800);
+    const raw = `${employerId}_${window}`;
+    const hash = crypto.createHash('sha256');
+    hash.update(raw);
+    const hex = hash.digest('hex');
+    const code = hex.substring(0, 6).toUpperCase();
+    return code;
 }

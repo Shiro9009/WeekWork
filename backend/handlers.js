@@ -1,6 +1,6 @@
 import { supabase } from './index.js';
 import { bot, APP_URL } from './bot.js';
-import { cleanPhoneNumber } from './scheduler.js';
+import { cleanPhoneNumber, generateInviteCode } from './scheduler.js';
 
 bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
@@ -188,13 +188,26 @@ bot.on('message', async (msg) => {
     }
 
     if (data.state === 'awaiting_employer_phone') {
-        const phoneNumber = cleanPhoneNumber(text);
-        const { data: employer, error: findError } = await supabase
+        const code = text.trim().toUpperCase();
+
+        const { data: employers, error: findError } = await supabase
             .from('users')
-            .select('id, name, phone_number')
-            .eq('phone_number', phoneNumber)
-            .eq('role', 'employer')
-            .single();
+            .select('id, name')
+            .eq('role', 'employer');
+
+        if (findError || !employers) {
+            await bot.sendMessage(chatId, 'Ошибка поиска работодателей');
+            return;
+        }
+
+        let employer = null;
+        for (const e of employers) {
+            const generatedCode = generateInviteCode(e.id);
+            if (generatedCode === code) {
+                employer = e;
+                break;
+            }
+        }
 
         if (employer) {
             await supabase
@@ -218,7 +231,7 @@ bot.on('message', async (msg) => {
                 }
             });
         } else {
-            await bot.sendMessage(chatId, 'Работодатель с таким номером не найден. Попробуйте снова.');
+            await bot.sendMessage(chatId, 'Код недействителен. Попросите у работодателя новый код.');
         }
 
     } else if (data.state === 'completed') {
@@ -270,7 +283,7 @@ bot.on('callback_query', async (callbackQuery) => {
                     state: 'awaiting_employer_phone'
                 });
 
-            await bot.sendMessage(chatId, 'Отправь номер телефона работодателя');
+            await bot.sendMessage(chatId, 'Отправь код работодателя (6 символов)');
         }
 
     } else if (data === 'role_employer') {
@@ -302,4 +315,3 @@ bot.on('callback_query', async (callbackQuery) => {
 
     await bot.answerCallbackQuery(callbackQuery.id);
 });
-

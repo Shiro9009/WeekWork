@@ -292,14 +292,15 @@ export default {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin: 30px auto;
-    padding: 30px 20px;
+    margin: 20px auto;
+    padding: 14px;
     background: #fff;
     border-radius: 16px;
     border: 1px solid #e5e7eb;
     width: 358px;
     min-height: 200px;
     box-sizing: border-box;
+    box-shadow: 0 2px 10px 0 rgba(0, 0, 0, 0.05);
 }
 
 .final-title {
@@ -330,22 +331,21 @@ export default {
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: #7c6bc4;
-    color: #fff;
+    background: #ffffff;
+    color: #7c6bc4;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 16px;
     font-weight: 600;
-    box-shadow: 0 2px 8px rgba(124, 107, 196, 0.3);
-    border: 2px solid #fff;
+    border: 2px solid #7c6bc4;
     transition: transform 0.2s ease;
     cursor: default;
 }
 
 .day-circle:hover {
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(124, 107, 196, 0.4);
+    background: #f3f0fc;
 }
 
 .final-empty {
