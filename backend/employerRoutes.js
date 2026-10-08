@@ -4,6 +4,8 @@ import { getNextWeekStart, generateInviteCode } from "./scheduler.js";
 import { bot } from './bot.js';
 
 const router = express.Router();
+const DAY_ORDER = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+
 
 router.get('/api/employer-data', async (req, res) => {
     const { telegram_id } = req.query;
@@ -142,6 +144,9 @@ router.post('/api/choose-option', async (req, res) => {
                 workerDays.push(day);
             }
         }
+
+        workerDays.sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b));
+
         if (workerDays.length > 0) {
             const message = `Ваши смены на неделю: ${workerDays.join(', ')}`;
             await bot.sendMessage(worker.telegram_id, message);
@@ -151,8 +156,6 @@ router.post('/api/choose-option', async (req, res) => {
 
     res.json({ success: true, message: 'Расписание выбрано!' });
 });
-
-const DAY_ORDER = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
 
 function compareDays(a, b) {
     const indexA = DAY_ORDER.indexOf(a);
@@ -305,12 +308,12 @@ router.get('/api/user-role', async (req, res) => {
 });
 
 router.get('/api/employer-code', async (req, res) => {
-    const {telegram_id} = req.query;
+    const { telegram_id } = req.query;
     if (!telegram_id) {
         return res.status(400).json({ error: "Не указан telegram_id" });
     }
 
-    const {data: employer, error} = await supabase
+    const { data: employer, error } = await supabase
         .from("users")
         .select("id, name")
         .eq("telegram_id", telegram_id)
@@ -324,7 +327,7 @@ router.get('/api/employer-code', async (req, res) => {
     const code = generateInviteCode(employer.id);
 
     const now = Math.floor(Date.now() / 1000);
-    const windowStart = Math.floor(now / 1800) * 1800;  
+    const windowStart = Math.floor(now / 1800) * 1800;
     const windowEnd = windowStart + 1800;
     const expiresIn = windowEnd - now;
 
