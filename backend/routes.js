@@ -1,9 +1,10 @@
 import express from "express";
 import { supabase } from "./index.js";
 import { getNextWeekStart, generationSchedule } from "./scheduler.js";
+import { bot } from './bot.js';
 
 const router = express.Router();
-const DAY_KEYS = { Mo: "пн", Tu: "вт", We: "ср", Th: "чт", Fr: "пт", Sa: "сб", Su: "вс"};
+const DAY_KEYS = { Mo: "пн", Tu: "вт", We: "ср", Th: "чт", Fr: "пт", Sa: "сб", Su: "вс" };
 
 router.post('/api/availability', async (req, res) => {
     console.log('Запрос получен:', req.body);
@@ -83,6 +84,36 @@ router.post('/api/availability', async (req, res) => {
         if (error) {
             console.error('Ошибка сохранения в weekly_availability:', error);
             return res.status(500).json({ error: 'Ошибка сохранения: ' + error.message });
+        }
+
+        if (desc && desc.trim().length > 0) {
+            const { data: worker } = await supabase
+                .from('users')
+                .select('name, employer_id')
+                .eq('telegram_id', telegram_id)
+                .single();
+
+            if (worker && worker.employer_id) {
+                const { data: employer } = await supabase
+                    .from('users')
+                    .select('telegram_id')
+                    .eq('id', worker.employer_id)
+                    .single();
+
+                if (employer && employer.telegram_id) {
+                    const message = `От: ${worker.name}\n${desc}`;
+                    await bot.sendMessage(employer.telegram_id, message);
+                    console.log(`Нюансы отправлены работодателю от ${worker.name}`);
+
+                    await supabase
+                        .from('weekly_availability')
+                        .update({ description: '' })
+                        .eq('worker_id', user.id)
+                        .eq('week_start', weekStart);
+
+                    console.log(`Нюансы удалены из БД для ${worker.name}`);
+                }
+            }
         }
 
         const { data: worker, error: workerError } = await supabase
