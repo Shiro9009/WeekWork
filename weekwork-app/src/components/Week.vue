@@ -95,7 +95,9 @@
                         v-model="desc"></textarea>
                 </div>
             </section>
-            <button @click="sendData()" class="Send-data">Отправить данные</button>
+            <button @click="sendData()" class="Send-data" :disabled="isSending">
+                {{ isSending ? 'Отправка...' : 'Отправить данные' }}
+            </button>
         </div>
     </div>
 </template>
@@ -115,6 +117,7 @@ export default {
             isSubmitted: false,
             hasFinalSchedule: false,
             myDays: [],
+            isSending: false,
         }
     },
     methods: {
@@ -176,23 +179,31 @@ export default {
             this.days[day] = next;
         },
         async sendData() {
+            if (this.isSending) return;
+
             if (!this.$parent.user) {
                 alert('Пользователь не авторизован')
                 return
             }
+
+            this.isSending = true;
+
             const payload = {
                 telegram_id: this.$parent.user.id,
                 first_name: this.$parent.user.first_name || 'Пользователь',
                 days: this.days,
                 desc: this.desc,
             }
+
             try {
                 const response = await fetch(`${API_URL}/api/availability`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 })
+
                 const result = await response.json()
+
                 if (result.success) {
                     this.isSubmitted = true;
                     alert('Данные сохранены');
@@ -202,6 +213,8 @@ export default {
             } catch (error) {
                 console.error('Ошибка отправки:', error)
                 alert('Не удалось отправить данные')
+            } finally {
+                this.isSending = false;
             }
         },
         async checkSubmittedStatus() {

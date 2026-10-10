@@ -1,6 +1,6 @@
 import { supabase } from './index.js';
 import { bot, APP_URL } from './bot.js';
-import { cleanPhoneNumber, generateInviteCode } from './scheduler.js';
+import { generateInviteCode } from './scheduler.js';
 
 bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
@@ -23,13 +23,12 @@ bot.onText(/\/start/, async (msg) => {
         return;
     }
 
-    bot.sendMessage(chatId, 'Нажмите кнопку, чтобы отправить номер телефона', {
+    await bot.sendMessage(chatId, 'Подскажите, кто вы: работник или работодатель?', {
         reply_markup: {
-            keyboard: [
-                [{ text: 'Отправить', request_contact: true }]
-            ],
-            resize_keyboard: true,
-            one_time_keyboard: true
+            inline_keyboard: [
+                [{ text: 'Работник', callback_data: 'role_worker' }],
+                [{ text: 'Работодатель', callback_data: 'role_employer' }],
+            ]
         }
     });
 });
@@ -102,78 +101,6 @@ bot.on('message', async (msg) => {
     const text = msg.text;
 
     if (text === '/start' || text === '/reset' || text === '/clearcache') {
-        return;
-    }
-    
-    if (msg.contact) {
-        const phoneNumber = cleanPhoneNumber(msg.contact.phone_number);
-        console.log('Номер пользователя:', phoneNumber);
-
-        const { data: existingUser, error: findError } = await supabase
-            .from('users')
-            .select('id, telegram_id')
-            .eq('phone_number', phoneNumber)
-            .single();
-
-        if (existingUser) {
-            await supabase
-                .from('users')
-                .update({ telegram_id: telegramId })
-                .eq('phone_number', phoneNumber);
-            console.log('Пользователь обновлён');
-        } else {
-            const { data: userByTelegram, error: findTelegramError } = await supabase
-                .from('users')
-                .select('id, phone_number')
-                .eq('telegram_id', telegramId)
-                .single();
-
-            if (userByTelegram) {
-                await supabase
-                    .from('users')
-                    .update({ phone_number: phoneNumber })
-                    .eq('telegram_id', telegramId);
-                console.log('Добавлен номер для существующего пользователя');
-            } else {
-                await supabase
-                    .from('users')
-                    .insert({
-                        telegram_id: telegramId,
-                        phone_number: phoneNumber,
-                        name: msg.from.first_name || 'Пользователь'
-                    });
-                console.log('Создан новый пользователь');
-            }
-        }
-
-
-        const { error: sessionError } = await supabase
-            .from('user_sessions')
-            .upsert({
-                user_id: telegramId,
-                state: 'awaiting_role'
-            });
-
-        if (sessionError) {
-            console.log('Ошибка создания сессии:', sessionError);
-        } else {
-            console.log('Сессия создана для пользователя:', telegramId);
-        }
-
-        bot.sendMessage(chatId, 'Номер получен. Спасибо', {
-            reply_markup: {
-                remove_keyboard: true
-            }
-        });
-
-        bot.sendMessage(chatId, 'Подскажите, кто вы: работник или работодатель?', {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: 'Работник', callback_data: 'role_worker' }],
-                    [{ text: 'Работодатель', callback_data: 'role_employer' }],
-                ]
-            }
-        });
         return;
     }
 
@@ -274,51 +201,73 @@ bot.on('callback_query', async (callbackQuery) => {
     const data = callbackQuery.data;
 
     if (data === 'role_worker') {
-        const { error } = await supabase
+        const { data: existingUser } = await supabase
             .from('users')
-            .update({ role: 'worker' })
-            .eq('telegram_id', telegramId);
+            .select('id')
+            .eq('telegram_id', telegramId)
+            .single();
 
-        if (error) {
-            console.log('Ошибка обновления роли:', error);
-            await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
-        } else {
-            await bot.sendMessage(chatId, 'Ты выбран как работник');
+        if (!existingUser) {
             await supabase
-                .from('user_sessions')
-                .upsert({
-                    user_id: telegramId,
-                    state: 'awaiting_employer_phone'
+                .from('users')
+                .insert({
+                    telegram_id: telegramId,
+                    name: callbackQuery.from.first_name || 'Пользователь',
+                    role: 'worker'
                 });
-
-            await bot.sendMessage(chatId, 'Отправь код работодателя (6 символов)');
+        } else {
+            await supabase
+                .from('users')
+                .update({ role: 'worker' })
+                .eq('telegram_id', telegramId);
         }
+
+        await bot.sendMessage(chatId, 'Ты выбран как работник');
+        await supabase
+            .from('user_sessions')
+            .upsert({
+                user_id: telegramId,
+                state: 'awaiting_employer_phone'
+            });
+
+        await bot.sendMessage(chatId, 'Отправь код работодателя (6 символов)');
 
     } else if (data === 'role_employer') {
-        const { error } = await supabase
+        const { data: existingUser } = await supabase
             .from('users')
-            .update({ role: 'employer' })
-            .eq('telegram_id', telegramId);
+            .select('id')
+            .eq('telegram_id', telegramId)
+            .single();
 
-        if (error) {
-            console.log('Ошибка обновления роли:', error);
-            await bot.sendMessage(chatId, 'Произошла ошибка при сохранении роли');
-        } else {
-            await bot.sendMessage(chatId, 'Ты выбран как работодатель');
+        if (!existingUser) {
             await supabase
-                .from('user_sessions')
-                .upsert({
-                    user_id: telegramId,
-                    state: 'completed'
+                .from('users')
+                .insert({
+                    telegram_id: telegramId,
+                    name: callbackQuery.from.first_name || 'Пользователь',
+                    role: 'employer'
                 });
-            await bot.sendMessage(chatId, 'Добро пожаловать!', {
-                reply_markup: {
-                    inline_keyboard: [
-                        [{ text: 'Открыть приложение', web_app: { url: APP_URL } }]
-                    ]
-                }
-            });
+        } else {
+            await supabase
+                .from('users')
+                .update({ role: 'employer' })
+                .eq('telegram_id', telegramId);
         }
+
+        await bot.sendMessage(chatId, 'Ты выбран как работодатель');
+        await supabase
+            .from('user_sessions')
+            .upsert({
+                user_id: telegramId,
+                state: 'completed'
+            });
+        await bot.sendMessage(chatId, 'Добро пожаловать!', {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: 'Открыть приложение', web_app: { url: APP_URL } }]
+                ]
+            }
+        });
     }
 
     await bot.answerCallbackQuery(callbackQuery.id);
